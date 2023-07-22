@@ -462,6 +462,7 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
                           },
                           icon: const Icon(Icons.arrow_back),
                           iconSize: 30,
+                          color: Colors.white,
                         ),
                       ),
                     ),

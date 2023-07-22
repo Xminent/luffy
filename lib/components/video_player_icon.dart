@@ -31,7 +31,13 @@ class VideoPlayerIcon extends StatelessWidget {
                 color: color,
               ),
               const SizedBox(width: 8),
-              Text(label, style: Theme.of(context).textTheme.labelSmall),
+              Text(
+                label,
+                style: Theme.of(context)
+                    .textTheme
+                    .labelSmall!
+                    .copyWith(color: color),
+              ),
             ],
           ),
         ),
