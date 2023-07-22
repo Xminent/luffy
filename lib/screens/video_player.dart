@@ -1,8 +1,8 @@
 import "package:flutter/material.dart";
 import "package:flutter/scheduler.dart";
 import "package:flutter/services.dart";
-import "package:flutter_secure_storage/flutter_secure_storage.dart";
 import "package:luffy/api/anime.dart";
+import "package:luffy/api/history.dart";
 import "package:luffy/components/video_controls.dart";
 import "package:luffy/util.dart";
 import "package:media_kit/media_kit.dart";
@@ -20,6 +20,7 @@ class VideoPlayerScreen extends StatefulWidget {
     required this.sourceName,
     this.subtitle,
     this.savedProgress,
+    required this.imageUrl,
   });
 
   final int showId;
@@ -30,6 +31,7 @@ class VideoPlayerScreen extends StatefulWidget {
   final String sourceName;
   final Subtitle? subtitle;
   final double? savedProgress;
+  final String? imageUrl;
 
   @override
   State<VideoPlayerScreen> createState() => _VideoPlayerScreenState();
@@ -258,12 +260,15 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
         _secondsOnScreen <= minSecondsOnScreen) {
       prints("Watched enough of the video to save progress.");
 
-      // Store our video progress in storage.
-      const storage = FlutterSecureStorage();
-
-      storage.write(
-        key: "anime_${widget.showId}_episode_${widget.episode}",
-        value: progress.toString(),
+      HistoryService.addProgress(
+        HistoryEntry(
+          id: widget.showId,
+          title: widget.showTitle,
+          imageUrl: widget.imageUrl ?? "",
+          progress: {},
+        ),
+        widget.episode,
+        progress,
       );
 
       prints(

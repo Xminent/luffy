@@ -1,21 +1,40 @@
 import "dart:convert";
 
+import "package:collection/collection.dart";
 import "package:flutter_secure_storage/flutter_secure_storage.dart";
+import "package:luffy/util.dart";
 
 class HistoryEntry {
   const HistoryEntry({
-    this.id,
+    required this.id,
     required this.title,
     required this.imageUrl,
-    required this.url,
     required this.progress,
   });
 
+  HistoryEntry.fromJson(Map<String, dynamic> json)
+      : id = json["id"],
+        title = json["title"],
+        imageUrl = json["image_url"],
+        progress = json["progress"];
+
+  // The ID of the anime (if a normie show/movie will be formatted like so: "$sourceName-$showId")
   final int? id;
+  //  The title of the anime/show/movie
   final String title;
+  // The image URL of the anime/show/movie
   final String imageUrl;
-  final String url;
-  final double progress;
+  // The stored progress of the media (is indexed by the episode number)
+  final Map<int, double> progress;
+
+  Map<String, dynamic> toJson() {
+    return {
+      "id": id,
+      "title": title,
+      "image_url": imageUrl,
+      "progress": progress.map((key, value) => MapEntry(key.toString(), value)),
+    };
+  }
 }
 
 const _storage = FlutterSecureStorage();
@@ -34,14 +53,20 @@ class HistoryService {
           ? (jsonDecode(historyStr) as List)
               .map(
                 (e) => HistoryEntry(
+                  id: e["id"],
                   title: e["title"],
                   imageUrl: e["image_url"],
-                  url: e["url"],
-                  progress: e["progress"],
+                  progress: e["progress"] != null
+                      ? Map.fromEntries(
+                          (e["progress"] as Map<String, dynamic>).entries.map(
+                                (e) => MapEntry(int.parse(e.key), e.value),
+                              ),
+                        )
+                      : {},
                 ),
               )
               .toList()
-          : [] as List<HistoryEntry>;
+          : <HistoryEntry>[];
 
       _instance = HistoryService._internal(history);
     }
@@ -53,12 +78,31 @@ class HistoryService {
 
   List<HistoryEntry> get history => _history;
 
-  static Future<void> addMedia(HistoryEntry media) async {
+  static Future<void> addProgress(
+    HistoryEntry media,
+    int episodeNum,
+    double progress,
+  ) async {
     final instance = await _getInstance();
     final history = instance._history;
 
-    history.add(media);
-    _storage.write(key: "history", value: jsonEncode(history));
+    // If the entry is not in the history, add it.
+    if (!history.contains(media)) {
+      history.add(media);
+    }
+
+    // Update the progress of the media.
+    history
+        .firstWhere((element) => element.id == media.id)
+        .progress[episodeNum] = progress;
+
+    _storage.write(
+      key: "history",
+      value: jsonEncode(history.map((e) => e.toJson()).toList()),
+    );
+
+    // Print the current history.
+    prints("History: $history");
   }
 
   static Future<void> removeMedia(HistoryEntry media) async {
@@ -74,5 +118,18 @@ class HistoryService {
 
     // History must be reversed to show the latest media first.
     return instance._history.reversed.toList();
+  }
+
+  static Future<void> clearHistory() async {
+    final instance = await _getInstance();
+
+    instance._history.clear();
+    _storage.delete(key: "history");
+  }
+
+  static Future<HistoryEntry?> getMedia(int id) async {
+    final instance = await _getInstance();
+
+    return instance._history.firstWhereOrNull((element) => element.id == id);
   }
 }

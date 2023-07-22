@@ -40,14 +40,14 @@ class OauthVars {
   final String loginUrl;
 }
 
-class LoginScreenWindows extends StatefulWidget {
-  const LoginScreenWindows({super.key});
+class LoginWindowsScreen extends StatefulWidget {
+  const LoginWindowsScreen({super.key});
 
   @override
-  State<LoginScreenWindows> createState() => LoginScreenWindowsState();
+  State<LoginWindowsScreen> createState() => LoginWindowsScreenState();
 }
 
-class LoginScreenWindowsState extends State<LoginScreenWindows> {
+class LoginWindowsScreenState extends State<LoginWindowsScreen> {
   final _controller = WebviewController();
   final _textController = TextEditingController();
   final List<StreamSubscription> _subscriptions = [];

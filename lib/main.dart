@@ -6,7 +6,7 @@ import "package:flutter/services.dart";
 import "package:flutter_inappwebview/flutter_inappwebview.dart";
 import "package:luffy/auth.dart";
 import "package:luffy/screens/home_tab.dart";
-import "package:luffy/screens/login_windows.dart";
+import "package:luffy/screens/login.dart";
 import "package:luffy/theme.dart";
 import "package:media_kit/media_kit.dart";
 import "package:window_manager/window_manager.dart";
@@ -46,7 +46,7 @@ MaterialApp _buildMaterialApp({
     home: home,
     routes: {
       "/home": (context) => const HomeTabScreen(),
-      "/login": (context) => const LoginScreenWindows(),
+      "/login": (context) => const LoginScreen(),
     },
   );
 }
@@ -66,7 +66,7 @@ class MyApp extends StatelessWidget {
         if (!snapshot.hasData || snapshot.data == null) {
           return _buildMaterialApp(
             isAuthenticated: false,
-            home: const LoginScreenWindows(),
+            home: const LoginScreen(),
           );
         }
 

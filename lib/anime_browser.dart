@@ -188,6 +188,7 @@ class _AnimeBrowserState extends State<AnimeBrowser> {
                               episodeTitle: "Video",
                               url: url,
                               sourceName: "Anime Browser",
+                              imageUrl: "",
                             ),
                           ),
                         );

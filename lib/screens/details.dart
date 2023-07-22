@@ -1,13 +1,13 @@
 import "package:cached_network_image/cached_network_image.dart";
 import "package:collection/collection.dart";
 import "package:flutter/material.dart";
-import "package:flutter_secure_storage/flutter_secure_storage.dart";
 import "package:intl/intl.dart";
 import "package:luffy/api/anime.dart";
 import "package:luffy/api/extractors/animeflix.dart";
 import "package:luffy/api/extractors/animepahe.dart";
 import "package:luffy/api/extractors/gogoanime.dart";
 import "package:luffy/api/extractors/superstream.dart";
+import "package:luffy/api/history.dart";
 import "package:luffy/api/mal.dart";
 import "package:luffy/components/blinking_button.dart";
 import "package:luffy/components/episode_list.dart";
@@ -127,12 +127,7 @@ class _DetailsScreenState extends State<DetailsScreen>
       return;
     }
 
-    const storage = FlutterSecureStorage();
-
-    final savedProgressData =
-        await storage.read(key: "anime_${widget.animeId}_episode_${idx + 1}");
-
-    final savedProgress = double.tryParse(savedProgressData ?? "");
+    final episodeProgress = animeInfo.episodeProgress[idx];
 
     // ignore: use_build_context_synchronously
     final progress = await Navigator.of(context).push<double>(
@@ -145,7 +140,8 @@ class _DetailsScreenState extends State<DetailsScreen>
           url: source.videoUrl,
           sourceName: _extractor.name,
           subtitle: source.subtitle,
-          savedProgress: savedProgress,
+          savedProgress: episodeProgress,
+          imageUrl: animeInfo.anime.imageUrl,
         ),
       ),
     );
@@ -225,23 +221,18 @@ class _DetailsScreenState extends State<DetailsScreen>
         listStatus?.watchedEpisodes ?? widget.watchedEpisodes;
 
     final isLoggedIn = await MalService.isLoggedIn();
-    const storage = FlutterSecureStorage();
+    final history = await HistoryService.getMedia(widget.animeId);
 
-    final episodeProgress = await Future.wait(
-      episodes.asMap().entries.map((e) async {
-        final idx = e.key;
+    final episodeProgress = episodes.asMap().entries.map((e) {
+      final idx = e.key;
+      final value = history?.progress[idx + 1];
 
-        // Attempt to read the progress from the storage.
-        final key = "anime_${widget.animeId}_episode_${idx + 1}";
-        final value = await storage.read(key: key);
+      if (value == null) {
+        return null;
+      }
 
-        if (value == null) {
-          return null;
-        }
-
-        return double.tryParse(value);
-      }).toList(),
-    );
+      return value;
+    }).toList();
 
     return _AnimeAndEpisodes(
       isLoggedIn: isLoggedIn,
