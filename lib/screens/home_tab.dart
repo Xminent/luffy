@@ -2,6 +2,7 @@ import "package:flutter/material.dart";
 import "package:luffy/screens/discover.dart";
 import "package:luffy/screens/home.dart";
 import "package:luffy/screens/search.dart";
+import "package:luffy/screens/search_sources.dart";
 
 class HomeTabScreen extends StatefulWidget {
   const HomeTabScreen({super.key});
@@ -19,6 +20,7 @@ class _HomeTabScreenState extends State<HomeTabScreen>
     const HomeScreen(),
     const DiscoverScreen(),
     const SearchScreen(),
+    const SearchScreenSources()
   ];
 
   void _handleTabChange() {
@@ -58,6 +60,9 @@ class _HomeTabScreenState extends State<HomeTabScreen>
         currentIndex: _currentIndex,
         showSelectedLabels: false,
         showUnselectedLabels: false,
+        selectedItemColor: Theme.of(context).colorScheme.primary,
+        unselectedItemColor:
+            Theme.of(context).colorScheme.onBackground.withOpacity(0.5),
         onTap: (index) {
           setState(() {
             _currentIndex = index;
@@ -77,6 +82,10 @@ class _HomeTabScreenState extends State<HomeTabScreen>
           BottomNavigationBarItem(
             icon: Icon(Icons.search),
             label: "Search",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.tv),
+            label: "Search All",
           ),
         ],
       ),

@@ -1,8 +1,11 @@
 import "package:custom_refresh_indicator/custom_refresh_indicator.dart";
 import "package:flutter/material.dart";
+import "package:luffy/api/anime.dart";
+import "package:luffy/api/history.dart";
 import "package:luffy/api/mal.dart";
 import "package:luffy/components/anime_info.dart";
 import "package:luffy/screens/details.dart";
+import "package:luffy/screens/details_sources.dart";
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,6 +25,14 @@ class _HomeScreenState extends State<HomeScreen>
     "Completed",
     "Dropped",
   ];
+
+  final Map<String, AnimeExtractor> _extractorsMap = sources.fold(
+    {},
+    (Map<String, AnimeExtractor> map, AnimeExtractor extractor) {
+      map[extractor.name] = extractor;
+      return map;
+    },
+  );
 
   Future<AnimeList> _getAnimeList() async {
     // return Future.value(AnimeList(
@@ -44,7 +55,62 @@ class _HomeScreenState extends State<HomeScreen>
     //   planToWatch: [],
     // ));
 
-    return MalService.getAnimeList();
+    final animeList = await MalService.getAnimeList();
+    final history = await HistoryService.getHistory();
+    final animeListWatchingIdIdxMap = <int, int>{};
+
+    // Create a map of the anime list's watching list's IDs to their index in the list.
+    for (var i = 0; i < animeList.watching.length; i++) {
+      final anime = animeList.watching[i];
+      animeListWatchingIdIdxMap[anime.id] = i;
+    }
+
+    // Add the history to the anime list's watching list. If an entry's ID is already in the list, move it to the top.
+    for (final historyEntry in history) {
+      final id = historyEntry.id;
+      final isAnime = id != null &&
+          int.tryParse(id) != null &&
+          animeListWatchingIdIdxMap.containsKey(int.parse(id));
+
+      if (isAnime) {
+        final anime =
+            animeList.watching[animeListWatchingIdIdxMap[int.parse(id)]!];
+        final index = animeList.watching.indexOf(anime);
+
+        animeList.watching.removeAt(index);
+        animeList.watching.insert(0, anime);
+      } else {
+        final latestEpisode = historyEntry.progress.isNotEmpty
+            ? historyEntry.progress.keys.last
+            : 0;
+
+        animeList.watching.insert(
+          0,
+          AnimeListEntry(
+            id: -1,
+            title: historyEntry.title,
+            imageUrl: historyEntry.imageUrl,
+            status: AnimeListStatus.watching,
+            score: 0,
+            watchedEpisodes: latestEpisode,
+            totalEpisodes: historyEntry.totalEpisodes <= 0
+                ? null
+                : historyEntry.totalEpisodes,
+            isRewatching: false,
+            startDate: null,
+            endDate: null,
+            // NOTE: CoverImageUrl will be used for the determining of the source.
+            coverImageUrl: historyEntry.id,
+            kitsuId: null,
+            titleEnJp: "",
+            titleJaJp: "",
+            type: AnimeType.tv,
+          ),
+        );
+      }
+    }
+
+    return animeList;
   }
 
   @override
@@ -171,71 +237,113 @@ class _HomeScreenState extends State<HomeScreen>
                                 child: GestureDetector(
                                   onTap: () => Navigator.push(
                                     context,
-                                    MaterialPageRoute(
-                                      builder: (context) => DetailsScreen(
-                                        animeId: anime.id,
-                                        title: anime.title,
-                                        imageUrl: anime.imageUrl,
-                                        startDate: anime.startDate,
-                                        endDate: anime.endDate,
-                                        status: anime.status,
-                                        score: anime.score,
-                                        watchedEpisodes: anime.watchedEpisodes,
-                                        totalEpisodes: anime.totalEpisodes ?? 0,
-                                        coverImageUrl: anime.coverImageUrl,
-                                        titleEnJp: anime.titleEnJp,
-                                        titleJaJp: anime.titleJaJp,
-                                        type: anime.type,
-                                        onUpdate:
-                                            (score, watchedEpisodes, status) {
-                                          setState(() {
-                                            anime.score = score;
-                                            anime.watchedEpisodes =
-                                                watchedEpisodes;
+                                    anime.id != -1
+                                        ? MaterialPageRoute(
+                                            builder: (context) => DetailsScreen(
+                                              animeId: anime.id.toString(),
+                                              title: anime.title,
+                                              imageUrl: anime.imageUrl,
+                                              startDate: anime.startDate,
+                                              endDate: anime.endDate,
+                                              status: anime.status,
+                                              score: anime.score,
+                                              watchedEpisodes:
+                                                  anime.watchedEpisodes,
+                                              totalEpisodes:
+                                                  anime.totalEpisodes ?? 0,
+                                              coverImageUrl:
+                                                  anime.coverImageUrl,
+                                              titleEnJp: anime.titleEnJp,
+                                              titleJaJp: anime.titleJaJp,
+                                              type: anime.type,
+                                              onUpdate: (
+                                                score,
+                                                watchedEpisodes,
+                                                status,
+                                              ) {
+                                                setState(() {
+                                                  anime.score = score;
+                                                  anime.watchedEpisodes =
+                                                      watchedEpisodes;
 
-                                            if (anime.status == status) {
-                                              return;
-                                            }
+                                                  if (anime.status == status) {
+                                                    return;
+                                                  }
 
-                                            final toModify = (() {
-                                              switch (anime.status) {
-                                                case AnimeListStatus.watching:
-                                                  return animeList.watching;
-                                                case AnimeListStatus
-                                                      .planToWatch:
-                                                  return animeList.planToWatch;
-                                                case AnimeListStatus.onHold:
-                                                  return animeList.onHold;
-                                                case AnimeListStatus.completed:
-                                                  return animeList.completed;
-                                                case AnimeListStatus.dropped:
-                                                  return animeList.dropped;
-                                              }
-                                            })();
+                                                  final toModify = (() {
+                                                    switch (anime.status) {
+                                                      case AnimeListStatus
+                                                            .watching:
+                                                        return animeList
+                                                            .watching;
+                                                      case AnimeListStatus
+                                                            .planToWatch:
+                                                        return animeList
+                                                            .planToWatch;
+                                                      case AnimeListStatus
+                                                            .onHold:
+                                                        return animeList.onHold;
+                                                      case AnimeListStatus
+                                                            .completed:
+                                                        return animeList
+                                                            .completed;
+                                                      case AnimeListStatus
+                                                            .dropped:
+                                                        return animeList
+                                                            .dropped;
+                                                    }
+                                                  })();
 
-                                            final toAdd = (() {
-                                              switch (status) {
-                                                case AnimeListStatus.watching:
-                                                  return animeList.watching;
-                                                case AnimeListStatus
-                                                      .planToWatch:
-                                                  return animeList.planToWatch;
-                                                case AnimeListStatus.onHold:
-                                                  return animeList.onHold;
-                                                case AnimeListStatus.completed:
-                                                  return animeList.completed;
-                                                case AnimeListStatus.dropped:
-                                                  return animeList.dropped;
-                                              }
-                                            })();
+                                                  final toAdd = (() {
+                                                    switch (status) {
+                                                      case AnimeListStatus
+                                                            .watching:
+                                                        return animeList
+                                                            .watching;
+                                                      case AnimeListStatus
+                                                            .planToWatch:
+                                                        return animeList
+                                                            .planToWatch;
+                                                      case AnimeListStatus
+                                                            .onHold:
+                                                        return animeList.onHold;
+                                                      case AnimeListStatus
+                                                            .completed:
+                                                        return animeList
+                                                            .completed;
+                                                      case AnimeListStatus
+                                                            .dropped:
+                                                        return animeList
+                                                            .dropped;
+                                                    }
+                                                  })();
 
-                                            toModify.remove(anime);
-                                            toAdd.insert(0, anime);
-                                            anime.status = status;
-                                          });
-                                        },
-                                      ),
-                                    ),
+                                                  toModify.remove(anime);
+                                                  toAdd.insert(0, anime);
+                                                  anime.status = status;
+                                                });
+                                              },
+                                            ),
+                                          )
+                                        : MaterialPageRoute(
+                                            builder: (context) =>
+                                                DetailsScreenSources(
+                                              animeId: anime.coverImageUrl!,
+                                              title: anime.title,
+                                              imageUrl: anime.imageUrl,
+                                              extractor: _extractorsMap[anime
+                                                  .coverImageUrl!
+                                                  .substring(
+                                                0,
+                                                anime.coverImageUrl!
+                                                    .indexOf("-"),
+                                              )]!,
+                                              watchedEpisodes:
+                                                  anime.watchedEpisodes,
+                                              totalEpisodes:
+                                                  anime.totalEpisodes ?? 0,
+                                            ),
+                                          ),
                                   ),
                                   child: AnimeInfo(anime: anime),
                                 ),

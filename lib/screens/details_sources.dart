@@ -1,3 +1,5 @@
+// This file is similar to details.dart but this one does not offer the source selection. It is assumed that this screen was entered from a source.
+
 import "package:cached_network_image/cached_network_image.dart";
 import "package:collection/collection.dart";
 import "package:flutter/material.dart";
@@ -5,23 +7,19 @@ import "package:intl/intl.dart";
 import "package:luffy/api/anime.dart";
 import "package:luffy/api/history.dart";
 import "package:luffy/api/mal.dart";
-import "package:luffy/components/blinking_button.dart";
 import "package:luffy/components/episode_list.dart";
-import "package:luffy/components/mal_controls.dart";
-import "package:luffy/dialogs.dart";
 import "package:luffy/screens/video_player.dart";
 import "package:luffy/util.dart";
 import "package:skeletons/skeletons.dart";
 import "package:string_similarity/string_similarity.dart";
 import "package:tuple/tuple.dart";
-import "package:url_launcher/url_launcher.dart";
 
-class DetailsScreen extends StatefulWidget {
-  const DetailsScreen({
+class DetailsScreenSources extends StatefulWidget {
+  const DetailsScreenSources({
     super.key,
     required this.animeId,
     required this.title,
-    this.imageUrl,
+    required this.imageUrl,
     this.startDate,
     this.endDate,
     this.status,
@@ -33,6 +31,7 @@ class DetailsScreen extends StatefulWidget {
     this.titleJaJp,
     this.type,
     this.onUpdate,
+    required this.extractor,
   });
 
   final String animeId;
@@ -53,46 +52,33 @@ class DetailsScreen extends StatefulWidget {
     int watchedEpisodes,
     AnimeListStatus status,
   )? onUpdate;
+  final AnimeExtractor extractor;
 
   @override
-  State<DetailsScreen> createState() => _DetailsScreenState();
+  State<DetailsScreenSources> createState() => _DetailsScreenSourcesState();
 }
 
 class _AnimeAndEpisodes {
   _AnimeAndEpisodes({
-    required this.isLoggedIn,
     required this.anime,
     required this.episodes,
     required this.episodeProgress,
-    required this.totalEpisodes,
-    required this.score,
     required this.watchedEpisodes,
-    required this.status,
+    required this.totalEpisodes,
   });
 
-  final bool isLoggedIn;
   final MalAnime? anime;
   final List<Episode> episodes;
   List<double?> episodeProgress;
-  final int? totalEpisodes;
-  final int? score;
   final int? watchedEpisodes;
-  final AnimeListStatus? status;
+  final int? totalEpisodes;
 }
 
-class _DetailsScreenState extends State<DetailsScreen>
+class _DetailsScreenSourcesState extends State<DetailsScreenSources>
     with AutomaticKeepAliveClientMixin {
   late Future<_AnimeAndEpisodes?> _animeInfoFuture;
-  late int? _oldScore = widget.score;
-  late int? _oldWatchedEpisodes = widget.watchedEpisodes;
-  late AnimeListStatus? _oldStatus = widget.status;
 
-  late int? _score = widget.score;
-  late int? _watchedEpisodes = widget.watchedEpisodes;
-  late AnimeListStatus? _status = widget.status;
-
-  AnimeExtractor _extractor = sources.first;
-  int _extractorIndex = 0;
+  late final int? _watchedEpisodes = widget.watchedEpisodes;
 
   Future<void> _handleEpisodeSelected(
     Episode episode,
@@ -103,7 +89,7 @@ class _DetailsScreenState extends State<DetailsScreen>
       return;
     }
 
-    final source = await _extractor.getVideoUrl(episode);
+    final source = await widget.extractor.getVideoUrl(episode);
 
     if (source == null) {
       // ignore: use_build_context_synchronously
@@ -127,10 +113,10 @@ class _DetailsScreenState extends State<DetailsScreen>
           episode: idx + 1,
           episodeTitle: episode.title ?? "Untitled",
           url: source.videoUrl,
-          sourceName: _extractor.name,
+          sourceName: widget.extractor.name,
           subtitle: source.subtitle,
           savedProgress: episodeProgress,
-          imageUrl: animeInfo.anime?.imageUrl,
+          imageUrl: widget.imageUrl ?? animeInfo.anime?.imageUrl,
           totalEpisodes: animeInfo.totalEpisodes ?? widget.totalEpisodes ?? 0,
         ),
       ),
@@ -143,75 +129,21 @@ class _DetailsScreenState extends State<DetailsScreen>
     }
   }
 
-  Future<_AnimeAndEpisodes?> _getAnimeInfo({
-    bool firstTime = false,
-  }) async {
+  Future<_AnimeAndEpisodes?> _getAnimeInfo() async {
     final episodes = await (() async {
-      if (!firstTime) {
-        final results = await _extractor.search(widget.title);
+      final results = await widget.extractor.search(widget.title);
 
-        if (results.isEmpty) {
-          return <Episode>[];
-        }
-
-        final titles = results.map((e) => e.title.toLowerCase()).toList();
-        final bestMatch = results[
-            widget.title.toLowerCase().bestMatch(titles).bestMatchIndex];
-
-        return _extractor.getEpisodes(bestMatch);
+      if (results.isEmpty) {
+        return <Episode>[];
       }
 
-      for (; _extractorIndex < sources.length; _extractorIndex++) {
-        // Search all extractors for one with results.
-        _extractor = sources[_extractorIndex];
+      final titles = results.map((e) => e.title.toLowerCase()).toList();
+      final bestMatch =
+          results[widget.title.toLowerCase().bestMatch(titles).bestMatchIndex];
 
-        final results = await _extractor.search(widget.title);
-
-        if (results.isEmpty) {
-          continue;
-        }
-
-        final titles = results.map((e) => e.title).toList();
-        final bestMatch =
-            results[widget.title.bestMatch(titles).bestMatchIndex];
-
-        if (_extractorIndex >= sources.length - 1) {
-          _extractorIndex = 0;
-        }
-
-        return _extractor.getEpisodes(bestMatch);
-      }
-
-      if (_extractorIndex >= sources.length - 1) {
-        _extractorIndex = 0;
-      }
-
-      return <Episode>[];
+      return widget.extractor.getEpisodes(bestMatch);
     })();
 
-    final listStatus = await (() async {
-      final animeId = widget.animeId;
-
-      if (int.tryParse(animeId) == null) {
-        return null;
-      }
-
-      if (widget.score != null &&
-          widget.status != null &&
-          widget.totalEpisodes != null &&
-          widget.watchedEpisodes != null) {
-        return null;
-      }
-
-      return MalService.getListStatusFor(int.parse(animeId));
-    })();
-
-    final score = listStatus?.score ?? widget.score;
-    final status = listStatus?.status ?? widget.status;
-    final watchedEpisodes =
-        listStatus?.watchedEpisodes ?? widget.watchedEpisodes;
-
-    final isLoggedIn = await MalService.isLoggedIn();
     final history = await HistoryService.getMedia(widget.animeId);
 
     final episodeProgress = episodes.asMap().entries.map((e) {
@@ -230,55 +162,12 @@ class _DetailsScreenState extends State<DetailsScreen>
         : null;
 
     return _AnimeAndEpisodes(
-      isLoggedIn: isLoggedIn,
       anime: anime,
       episodes: episodes,
       episodeProgress: episodeProgress,
-      // Initially set the ones provided.
-      score: score,
-      status: status,
-      watchedEpisodes: watchedEpisodes,
-      totalEpisodes:
-          listStatus?.totalEpisodes ?? widget.totalEpisodes ?? anime?.episodes,
+      totalEpisodes: widget.totalEpisodes ?? anime?.episodes ?? episodes.length,
+      watchedEpisodes: widget.watchedEpisodes,
     );
-  }
-
-  List<Widget> _buildUpdateButton() {
-    final oldScore = _oldScore;
-    final oldStatus = _oldStatus;
-    final oldWatchedEpisodes = _oldWatchedEpisodes;
-
-    final score = _score;
-    final status = _status;
-    final watchedEpisodes = _watchedEpisodes;
-
-    if (oldScore == score &&
-        oldStatus == status &&
-        oldWatchedEpisodes == watchedEpisodes) {
-      return [];
-    }
-
-    return [
-      const SizedBox(height: 8),
-      SizedBox(
-        width: double.infinity,
-        child: BlinkingWidget(
-          blinkDuration: const Duration(milliseconds: 500),
-          child: OutlinedButton(
-            style: OutlinedButton.styleFrom(
-              backgroundColor:
-                  Theme.of(context).colorScheme.surface.withOpacity(0.1),
-              side: BorderSide(
-                color: Theme.of(context).colorScheme.primary,
-                width: 2,
-              ),
-            ),
-            onPressed: _saveChanges,
-            child: const Text("Update"),
-          ),
-        ),
-      ),
-    ];
   }
 
   Tuple2<List<Widget>, double?> _buildLocalResumeButton(
@@ -405,269 +294,6 @@ class _DetailsScreenState extends State<DetailsScreen>
     ];
   }
 
-  List<Widget> _buildAddToListButton(bool? isLoggedIn) {
-    final oldScore = _oldScore;
-    final oldStatus = _oldStatus;
-    final oldWatchedEpisodes = _oldWatchedEpisodes;
-
-    if (int.tryParse(widget.animeId) == null ||
-        oldScore != null ||
-        oldStatus != null ||
-        oldWatchedEpisodes != null ||
-        isLoggedIn == null ||
-        !isLoggedIn) {
-      return [];
-    }
-
-    return [
-      const SizedBox(height: 8),
-      SizedBox(
-        width: double.infinity,
-        child: BlinkingWidget(
-          blinkDuration: const Duration(milliseconds: 500),
-          child: OutlinedButton(
-            style: OutlinedButton.styleFrom(
-              backgroundColor:
-                  Theme.of(context).colorScheme.surface.withOpacity(0.1),
-              side: BorderSide(
-                color: Theme.of(context).colorScheme.primary,
-                width: 2,
-              ),
-            ),
-            onPressed: () async {
-              final res = await MalService.updateAnimeListItem(
-                int.parse(widget.animeId),
-                AnimeListStatus.planToWatch,
-                score: 0,
-                numWatchedEpisodes: 0,
-              );
-
-              if (res == null || res.statusCode != 200) {
-                if (context.mounted) {
-                  showErrorDialog(
-                    context,
-                    "Could not add anime to list. I'm guessing that MyAnimeList is down or you are not connected to the internet. Please try to add again later.",
-                  );
-                }
-
-                return;
-              }
-
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("Anime added to list!"),
-                  ),
-                );
-              }
-            },
-            child: const Text("Add to list"),
-          ),
-        ),
-      ),
-    ];
-  }
-
-  List<Widget> _buildMalControls(_AnimeAndEpisodes? animeInfo) {
-    if (animeInfo == null) {
-      return [];
-    }
-
-    final watchedEpisodes = _watchedEpisodes;
-    final totalEpisodes = animeInfo.totalEpisodes ?? widget.totalEpisodes;
-    final score = _score;
-    final status = _status;
-
-    if (watchedEpisodes == null ||
-        totalEpisodes == null ||
-        score == null ||
-        status == null) {
-      return [];
-    }
-
-    return [
-      const SizedBox(height: 16),
-      MalControls(
-        watchedEpisodes: watchedEpisodes,
-        totalEpisodes: totalEpisodes,
-        score: score,
-        status: status,
-        onScoreChanged: (value) {
-          setState(() {
-            _score = value;
-          });
-        },
-        onStatusChanged: (value) {
-          setState(() {
-            _status = value;
-          });
-        },
-        onWatchedEpisodesChanged: (value) {
-          setState(() {
-            _watchedEpisodes = value;
-
-            if (value == 0) {
-              _status = AnimeListStatus.planToWatch;
-              return;
-            }
-
-            if (value == totalEpisodes) {
-              _status = AnimeListStatus.completed;
-              return;
-            }
-
-            if (value > 0) {
-              _status = AnimeListStatus.watching;
-            }
-          });
-        },
-      ),
-    ];
-  }
-
-  List<Widget> _buildCharactersScrollable(_AnimeAndEpisodes? animeInfo) {
-    if (animeInfo == null) {
-      return [];
-    }
-
-    final characters = animeInfo.anime?.characters;
-
-    if (characters == null || characters.isEmpty) {
-      return [];
-    }
-
-    return [
-      const SizedBox(height: 16),
-      const Text(
-        "Characters",
-        style: TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      const SizedBox(height: 8),
-      SizedBox(
-        height: 200,
-        child: ListView.builder(
-          scrollDirection: Axis.horizontal,
-          itemCount: characters.length,
-          itemBuilder: (context, idx) {
-            final character = characters[idx];
-
-            return Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: Column(
-                children: [
-                  SizedBox(
-                    height: 150,
-                    width: 150,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: CachedNetworkImage(
-                        imageUrl: character.imageUrl,
-                        errorWidget: (context, url, error) => const Icon(
-                          Icons.error,
-                          color: Colors.red,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    width: 150,
-                    child: Text(
-                      character.name,
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        ),
-      ),
-    ];
-  }
-
-  List<Widget> _buildRelationsCards(_AnimeAndEpisodes? animeInfo) {
-    final relations = animeInfo?.anime?.relations;
-
-    if (relations == null || relations.isEmpty) {
-      return [];
-    }
-
-    final groupedRelations = relations.fold<Map<String, List<Relation>>>(
-      {},
-      (acc, relation) {
-        final type = relation.relationType;
-
-        if (acc.containsKey(type)) {
-          acc[type]!.add(relation);
-        } else {
-          acc[type] = [relation];
-        }
-
-        return acc;
-      },
-    );
-
-    return [
-      const SizedBox(height: 16),
-      Text(
-        "Relations",
-        style: Theme.of(context).textTheme.titleLarge,
-      ),
-      const SizedBox(height: 8),
-      ...groupedRelations.entries.map(
-        (entry) {
-          final relationType = entry.key;
-          final relations = entry.value;
-
-          return Column(
-            children: [
-              Text(
-                relationType,
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 8),
-              SizedBox(
-                height: relations.length * 30.0,
-                child: Column(
-                  children: relations.map(
-                    (relation) {
-                      return GestureDetector(
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => DetailsScreen(
-                              animeId: relation.id.toString(),
-                              title: relation.title,
-                            ),
-                          ),
-                        ),
-                        child: SizedBox(
-                          height: 30,
-                          child: Text(
-                            relation.title,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Colors.blue,
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ).toList(),
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-    ];
-  }
-
   Widget _buildBody({
     required _AnimeAndEpisodes? animeInfo,
     required String? coverImageUrl,
@@ -769,35 +395,6 @@ class _DetailsScreenState extends State<DetailsScreen>
               ),
               const SizedBox(height: 16),
               _buildGenres(animeInfo?.anime),
-              ..._buildCharactersScrollable(animeInfo),
-              ..._buildRelationsCards(animeInfo),
-              ..._buildMalControls(animeInfo),
-              ..._buildAddToListButton(animeInfo?.isLoggedIn),
-              ..._buildUpdateButton(),
-              DropdownButton(
-                value: _extractorIndex,
-                onChanged: (index) {
-                  if (index == null) {
-                    return;
-                  }
-
-                  setState(() {
-                    _extractorIndex = index;
-                    _extractor = sources[index];
-                    _animeInfoFuture = _getAnimeInfo();
-                  });
-                },
-                items: sources
-                    .asMap()
-                    .entries
-                    .map(
-                      (e) => DropdownMenuItem(
-                        value: e.key,
-                        child: Text(e.value.name),
-                      ),
-                    )
-                    .toList(),
-              ),
               const SizedBox(height: 16),
               ..._buildResumeButton(animeInfo),
               EpisodeList(
@@ -1051,172 +648,37 @@ class _DetailsScreenState extends State<DetailsScreen>
         ),
       );
 
-  Future<void> _goToMyAnimeList() async {
-    final uri = Uri.parse("https://myanimelist.net/anime/${widget.animeId}");
-
-    if (!await canLaunchUrl(uri)) {
-      return;
-    }
-
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
-  }
-
-  Future<void> _saveChanges() async {
-    final status = _status;
-    final score = _score;
-    final watchedEpisodes = _watchedEpisodes;
-
-    if (int.tryParse(widget.animeId) == null ||
-        status == null ||
-        score == null ||
-        watchedEpisodes == null) {
-      return;
-    }
-
-    final res = await MalService.updateAnimeListItem(
-      int.parse(widget.animeId),
-      status,
-      score: score,
-      numWatchedEpisodes: watchedEpisodes,
-    );
-
-    if (res == null || res.statusCode != 200) {
-      if (context.mounted) {
-        showErrorDialog(
-          context,
-          "Could not update this anime. I'm guessing that MyAnimeList is down or you are not connected to the internet. Please try to update again later.",
-        );
-      }
-
-      return;
-    }
-
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Anime updated successfully!"),
-        ),
-      );
-    }
-
-    setState(() {
-      _oldScore = score;
-      _oldStatus = status;
-      _oldWatchedEpisodes = watchedEpisodes;
-    });
-
-    widget.onUpdate?.call(score, watchedEpisodes, status);
-  }
-
-  Future<bool> _onWillPop() async {
-    if (_oldScore == _score &&
-        _oldStatus == _status &&
-        _oldWatchedEpisodes == _watchedEpisodes) {
-      return true;
-    }
-
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text(
-          "Save changes?",
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        content: const Text(
-          "You have unsaved changes. Do you want to sync them with MyAnimeList?",
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text("No"),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text("Yes"),
-          ),
-        ],
-      ),
-    );
-
-    if (result == null) {
-      return false;
-    }
-
-    if (result) {
-      await _saveChanges();
-    }
-
-    return true;
-  }
-
-  void _setInitialValues(_AnimeAndEpisodes? animeInfo) {
-    if (animeInfo == null) {
-      return;
-    }
-
-    if (mounted) {
-      setState(() {
-        _oldScore = animeInfo.score ?? widget.score;
-        _oldStatus = animeInfo.status ?? widget.status;
-        _oldWatchedEpisodes =
-            animeInfo.watchedEpisodes ?? widget.watchedEpisodes;
-
-        _score = _oldScore;
-        _status = _oldStatus;
-        _watchedEpisodes = _oldWatchedEpisodes;
-      });
-    }
-  }
-
   @override
   void initState() {
     super.initState();
 
-    _animeInfoFuture = _getAnimeInfo(firstTime: true);
-
-    // Post frame callback to set the initial values if the future is already done.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _animeInfoFuture.then((animeInfo) {
-        prints("Setting initial values");
-
-        _setInitialValues(animeInfo);
-      });
-    });
+    _animeInfoFuture = _getAnimeInfo();
   }
 
   @override
   Widget build(BuildContext context) {
     super.build(context);
 
-    return WillPopScope(
-      onWillPop: _onWillPop,
-      child: SafeArea(
-        child: FutureBuilder(
-          future: _animeInfoFuture,
-          builder: (context, snapshot) {
-            prints("Rebuilding anime info page");
+    return SafeArea(
+      child: FutureBuilder(
+        future: _animeInfoFuture,
+        builder: (context, snapshot) {
+          prints("Rebuilding anime info page");
 
-            final animeInfo = snapshot.data;
-            final coverImageUrl = widget.coverImageUrl;
+          final animeInfo = snapshot.data;
+          final coverImageUrl = widget.coverImageUrl;
 
-            return Scaffold(
-              appBar: AppBar(
-                title: Text(widget.title),
-                actions: [
-                  IconButton(
-                    icon: const Icon(Icons.open_in_new),
-                    onPressed: _goToMyAnimeList,
-                  ),
-                ],
-              ),
-              body: _buildBody(
-                animeInfo: animeInfo,
-                coverImageUrl: coverImageUrl,
-                isLoading: snapshot.connectionState != ConnectionState.done,
-              ),
-            );
-          },
-        ),
+          return Scaffold(
+            appBar: AppBar(
+              title: Text(widget.title),
+            ),
+            body: _buildBody(
+              animeInfo: animeInfo,
+              coverImageUrl: coverImageUrl,
+              isLoading: snapshot.connectionState != ConnectionState.done,
+            ),
+          );
+        },
       ),
     );
   }

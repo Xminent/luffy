@@ -21,9 +21,10 @@ class VideoPlayerScreen extends StatefulWidget {
     this.subtitle,
     this.savedProgress,
     required this.imageUrl,
+    required this.totalEpisodes,
   });
 
-  final int showId;
+  final String showId;
   final String showTitle;
   final int episode;
   final String episodeTitle;
@@ -32,6 +33,7 @@ class VideoPlayerScreen extends StatefulWidget {
   final Subtitle? subtitle;
   final double? savedProgress;
   final String? imageUrl;
+  final int totalEpisodes;
 
   @override
   State<VideoPlayerScreen> createState() => _VideoPlayerScreenState();
@@ -266,6 +268,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
           title: widget.showTitle,
           imageUrl: widget.imageUrl ?? "",
           progress: {},
+          totalEpisodes: widget.totalEpisodes,
         ),
         widget.episode,
         progress,

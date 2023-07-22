@@ -84,7 +84,7 @@ class _SearchScreenState extends State<SearchScreen>
                       context,
                       MaterialPageRoute(
                         builder: (context) => DetailsScreen(
-                          animeId: anime.id,
+                          animeId: anime.id.toString(),
                           imageUrl: anime.imageUrl,
                           title: anime.title,
                         ),
@@ -164,7 +164,7 @@ class _SearchScreenState extends State<SearchScreen>
             children: [
               TextField(
                 decoration: const InputDecoration(
-                  hintText: "Search",
+                  hintText: "search for an anime e.g one piece",
                   prefixIcon: Icon(Icons.search),
                 ),
                 onSubmitted: (value) {

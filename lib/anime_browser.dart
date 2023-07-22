@@ -182,13 +182,14 @@ class _AnimeBrowserState extends State<AnimeBrowser> {
                           context,
                           MaterialPageRoute(
                             builder: (context) => VideoPlayerScreen(
-                              showId: 0,
+                              showId: "test",
                               showTitle: "Video",
                               episode: 0,
                               episodeTitle: "Video",
                               url: url,
                               sourceName: "Anime Browser",
                               imageUrl: "",
+                              totalEpisodes: 0,
                             ),
                           ),
                         );

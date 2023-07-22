@@ -10,22 +10,26 @@ class HistoryEntry {
     required this.title,
     required this.imageUrl,
     required this.progress,
+    required this.totalEpisodes,
   });
 
   HistoryEntry.fromJson(Map<String, dynamic> json)
       : id = json["id"],
         title = json["title"],
         imageUrl = json["image_url"],
-        progress = json["progress"];
+        progress = json["progress"],
+        totalEpisodes = json["total_episodes"];
 
   // The ID of the anime (if a normie show/movie will be formatted like so: "$sourceName-$showId")
-  final int? id;
+  final String? id;
   //  The title of the anime/show/movie
   final String title;
   // The image URL of the anime/show/movie
   final String imageUrl;
   // The stored progress of the media (is indexed by the episode number)
   final Map<int, double> progress;
+  // The total number of episodes of the media
+  final int totalEpisodes;
 
   Map<String, dynamic> toJson() {
     return {
@@ -33,6 +37,7 @@ class HistoryEntry {
       "title": title,
       "image_url": imageUrl,
       "progress": progress.map((key, value) => MapEntry(key.toString(), value)),
+      "total_episodes": totalEpisodes,
     };
   }
 }
@@ -47,8 +52,14 @@ class HistoryService {
   static HistoryService? _instance;
 
   static Future<HistoryService> _getInstance() async {
+    // TODO: Debug delete.
+    // await _storage.delete(key: "history");
+
     if (_instance == null) {
       final historyStr = await _storage.read(key: "history");
+
+      prints("History: $historyStr");
+
       final history = historyStr != null
           ? (jsonDecode(historyStr) as List)
               .map(
@@ -63,6 +74,7 @@ class HistoryService {
                               ),
                         )
                       : {},
+                  totalEpisodes: e["total_episodes"],
                 ),
               )
               .toList()
@@ -115,9 +127,7 @@ class HistoryService {
 
   static Future<List<HistoryEntry>> getHistory() async {
     final instance = await _getInstance();
-
-    // History must be reversed to show the latest media first.
-    return instance._history.reversed.toList();
+    return instance._history;
   }
 
   static Future<void> clearHistory() async {
@@ -127,7 +137,7 @@ class HistoryService {
     _storage.delete(key: "history");
   }
 
-  static Future<HistoryEntry?> getMedia(int id) async {
+  static Future<HistoryEntry?> getMedia(String id) async {
     final instance = await _getInstance();
 
     return instance._history.firstWhereOrNull((element) => element.id == id);

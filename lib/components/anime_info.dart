@@ -12,6 +12,7 @@ class AnimeInfo extends StatelessWidget {
   Widget build(BuildContext context) {
     final episodesWatched = anime.watchedEpisodes;
     final episodeCount = anime.totalEpisodes;
+    final episodeCountStr = episodeCount == null ? "???" : "$episodeCount";
     final score = anime.score;
     final progress =
         episodeCount == null ? 1.0 : episodesWatched / episodeCount;
@@ -83,7 +84,7 @@ class AnimeInfo extends StatelessWidget {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text("$episodesWatched/$episodeCount"),
+                              Text("$episodesWatched/$episodeCountStr"),
                               if (score != 0)
                                 Container(
                                   padding: const EdgeInsets.symmetric(

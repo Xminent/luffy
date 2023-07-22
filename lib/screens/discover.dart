@@ -22,6 +22,8 @@ class _DiscoverScreenState extends State<DiscoverScreen>
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
+
     return SafeArea(
       child: Scaffold(
         appBar: AppBar(
@@ -61,7 +63,7 @@ class _DiscoverScreenState extends State<DiscoverScreen>
                           context,
                           MaterialPageRoute(
                             builder: (context) => DetailsScreen(
-                              animeId: anime.id,
+                              animeId: anime.id.toString(),
                               title: anime.title,
                               imageUrl: anime.imageUrl,
                               type: anime.type,

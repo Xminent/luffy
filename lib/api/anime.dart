@@ -1,5 +1,9 @@
 import "package:html/dom.dart";
 import "package:html/parser.dart";
+import "package:luffy/api/extractors/animeflix.dart";
+import "package:luffy/api/extractors/animepahe.dart";
+import "package:luffy/api/extractors/gogoanime.dart";
+import "package:luffy/api/extractors/superstream.dart";
 import "package:luffy/util/subtitle.dart";
 
 class Anime {
@@ -95,3 +99,10 @@ List<Anime> searchAnimeParse(AnimeParser parser, String response) {
 //       .map(parser.episodeFromElement)
 //       .toList();
 // }
+
+final sources = [
+  AnimeFlixExtractor(),
+  AnimePaheExtractor(),
+  GogoAnimeExtractor(),
+  SuperStreamExtractor(),
+];
