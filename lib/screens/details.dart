@@ -4,11 +4,11 @@ import "package:flutter/material.dart";
 import "package:flutter_secure_storage/flutter_secure_storage.dart";
 import "package:intl/intl.dart";
 import "package:luffy/api/anime.dart";
-import "package:luffy/api/animeflix.dart";
-import "package:luffy/api/animepahe.dart";
-import "package:luffy/api/gogoanime.dart";
+import "package:luffy/api/extractors/animeflix.dart";
+import "package:luffy/api/extractors/animepahe.dart";
+import "package:luffy/api/extractors/gogoanime.dart";
+import "package:luffy/api/extractors/superstream.dart";
 import "package:luffy/api/mal.dart";
-import "package:luffy/api/superstream.dart";
 import "package:luffy/components/blinking_button.dart";
 import "package:luffy/components/episode_list.dart";
 import "package:luffy/components/mal_controls.dart";
@@ -945,11 +945,11 @@ class _DetailsScreenState extends State<DetailsScreen>
         child: SkeletonItem(
           child: Column(
             children: [
-              Expanded(
+              const Expanded(
                 child: SizedBox(
                   height: 200,
                   child: Stack(
-                    children: const [
+                    children: [
                       // full-width cover image
                       Positioned.fill(
                         child: SkeletonAvatar(

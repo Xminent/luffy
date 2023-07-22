@@ -6,12 +6,18 @@ import "package:flutter/services.dart";
 import "package:flutter_inappwebview/flutter_inappwebview.dart";
 import "package:luffy/auth.dart";
 import "package:luffy/screens/home_tab.dart";
-import "package:luffy/screens/login.dart";
+import "package:luffy/screens/login_windows.dart";
 import "package:luffy/theme.dart";
 import "package:media_kit/media_kit.dart";
+import "package:window_manager/window_manager.dart";
 
 Future main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  if (defaultTargetPlatform == TargetPlatform.windows) {
+    await windowManager.ensureInitialized();
+  }
+
   MediaKit.ensureInitialized();
 
   if (!kIsWeb &&
@@ -27,12 +33,6 @@ Future main() async {
   ]);
 
   runApp(const MyApp());
-
-  // final extractor = AnimeFlixExtractor();
-  // final results = await extractor.search("naruto");
-  // final episodes = await extractor.getEpisodes(results.first);
-  // final source = await extractor.getVideoUrl(episodes.first);
-  // prints(source?.videoUrl);
 }
 
 MaterialApp _buildMaterialApp({
@@ -46,7 +46,7 @@ MaterialApp _buildMaterialApp({
     home: home,
     routes: {
       "/home": (context) => const HomeTabScreen(),
-      "/login": (context) => const LoginScreen(),
+      "/login": (context) => const LoginScreenWindows(),
     },
   );
 }
@@ -66,7 +66,7 @@ class MyApp extends StatelessWidget {
         if (!snapshot.hasData || snapshot.data == null) {
           return _buildMaterialApp(
             isAuthenticated: false,
-            home: const LoginScreen(),
+            home: const LoginScreenWindows(),
           );
         }
 

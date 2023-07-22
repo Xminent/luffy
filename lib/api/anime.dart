@@ -1,3 +1,5 @@
+import "package:html/dom.dart";
+import "package:html/parser.dart";
 import "package:luffy/util/subtitle.dart";
 
 class Anime {
@@ -65,3 +67,31 @@ abstract class AnimeExtractor {
   /// Returns a [Tuple2<String, Subtitle?] of the video url and its subtitle if available or null if not found.
   Future<VideoSource?> getVideoUrl(Episode episode);
 }
+
+abstract class AnimeParser {
+  /// Returns a selector for use in parsing the search results page.
+  /// Example: "div.ani.items > div.item"
+  String get searchAnimeSelector;
+
+  /// Returns a function which converts a [Element] to a [Anime].
+  /// Returns a [Anime].
+  Anime searchAnimeFromElement(Element element);
+
+  String get episodeSelector;
+
+  Episode episodeFromElement(Element element, String url);
+}
+
+List<Anime> searchAnimeParse(AnimeParser parser, String response) {
+  return parse(response)
+      .querySelectorAll(parser.searchAnimeSelector)
+      .map(parser.searchAnimeFromElement)
+      .toList();
+}
+
+// List<Episode> episodeListParse(AnimeParser parser, String response) {
+//   return parse(response)
+//       .querySelectorAll(parser.episodeSelector)
+//       .map(parser.episodeFromElement)
+//       .toList();
+// }
