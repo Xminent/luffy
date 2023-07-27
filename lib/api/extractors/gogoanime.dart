@@ -128,7 +128,7 @@ class GogoAnimeExtractor extends AnimeExtractor {
   }
 
   @override
-  Future<VideoSource?> getVideoUrl(Episode episode) async {
+  Future<List<VideoSource>> getSources(Episode episode) async {
     final headers = {
       "x-requested-with": "XMLHttpRequest",
     };
@@ -141,7 +141,7 @@ class GogoAnimeExtractor extends AnimeExtractor {
     final videoUrl = _parseUrls(res.body)?.videoUrl;
 
     if (videoUrl == null) {
-      return null;
+      return [];
     }
 
     final id = RegExp(r"id=([^&]+)")
@@ -150,7 +150,7 @@ class GogoAnimeExtractor extends AnimeExtractor {
         ?.replaceFirst("id=", "");
 
     if (id == null) {
-      return null;
+      return [];
     }
 
     final res2 = await http.get(
@@ -163,7 +163,7 @@ class GogoAnimeExtractor extends AnimeExtractor {
     final ajaxResponse = await _parseEncryptAjax(res2.body, id);
 
     if (ajaxResponse == null) {
-      return null;
+      return [];
     }
 
     final streamUrl = "https://anihdplay.com/encrypt-ajax.php?$ajaxResponse";
@@ -177,7 +177,14 @@ class GogoAnimeExtractor extends AnimeExtractor {
 
     prints(sources);
 
-    return sources.isEmpty ? null : VideoSource(videoUrl: sources.first);
+    return sources
+        .map(
+          (e) => VideoSource(
+            videoUrl: e,
+            description: "GogoAnime",
+          ),
+        )
+        .toList();
   }
 }
 

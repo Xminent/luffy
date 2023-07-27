@@ -2,6 +2,7 @@ import "dart:convert";
 
 import "package:collection/collection.dart";
 import "package:flutter_secure_storage/flutter_secure_storage.dart";
+import "package:luffy/api/anime.dart";
 import "package:luffy/util.dart";
 
 class HistoryEntry {
@@ -11,6 +12,9 @@ class HistoryEntry {
     required this.imageUrl,
     required this.progress,
     required this.totalEpisodes,
+    required this.sources,
+    required this.subtitles,
+    required this.sourceExpiration,
   });
 
   HistoryEntry.fromJson(Map<String, dynamic> json)
@@ -18,7 +22,10 @@ class HistoryEntry {
         title = json["title"],
         imageUrl = json["image_url"],
         progress = json["progress"],
-        totalEpisodes = json["total_episodes"];
+        totalEpisodes = json["total_episodes"],
+        sources = json["sources"],
+        subtitles = json["subtitles"],
+        sourceExpiration = DateTime.parse(json["sources_last_updated"]);
 
   // The ID of the anime (if a normie show/movie will be formatted like so: "$sourceName-$showId")
   final String? id;
@@ -30,6 +37,12 @@ class HistoryEntry {
   final Map<int, double> progress;
   // The total number of episodes of the media
   final int totalEpisodes;
+  // Sources for the media, all serialized to JSON.
+  final Map<int, List<VideoSource>> sources;
+  // Subtitles for the media, all serialized to JSON.
+  final Map<int, List<Subtitle>> subtitles;
+  // Timestamp of when sources were last updated. (Used for caching)
+  final DateTime sourceExpiration;
 
   Map<String, dynamic> toJson() {
     return {
@@ -38,6 +51,19 @@ class HistoryEntry {
       "image_url": imageUrl,
       "progress": progress.map((key, value) => MapEntry(key.toString(), value)),
       "total_episodes": totalEpisodes,
+      "sources": sources.map(
+        (key, value) => MapEntry(
+          key.toString(),
+          value.map((e) => e.toJson()).toList(),
+        ),
+      ),
+      "subtitles": subtitles.map(
+        (key, value) => MapEntry(
+          key.toString(),
+          value.map((e) => e.toJson()).toList(),
+        ),
+      ),
+      "source_expiration": sourceExpiration.toIso8601String(),
     };
   }
 }
@@ -75,6 +101,31 @@ class HistoryService {
                         )
                       : {},
                   totalEpisodes: e["total_episodes"],
+                  sources: e["sources"] != null
+                      ? Map.fromEntries(
+                          (e["sources"] as Map<String, dynamic>).entries.map(
+                                (e) => MapEntry(
+                                  int.parse(e.key),
+                                  (e.value as List)
+                                      .map((e) => VideoSource.fromJson(e))
+                                      .toList(),
+                                ),
+                              ),
+                        )
+                      : {},
+                  subtitles: e["subtitles"] != null
+                      ? Map.fromEntries(
+                          (e["subtitles"] as Map<String, dynamic>).entries.map(
+                                (e) => MapEntry(
+                                  int.parse(e.key),
+                                  (e.value as List)
+                                      .map((e) => Subtitle.fromJson(e))
+                                      .toList(),
+                                ),
+                              ),
+                        )
+                      : {},
+                  sourceExpiration: DateTime.parse(e["source_expiration"]),
                 ),
               )
               .toList()
@@ -87,6 +138,7 @@ class HistoryService {
   }
 
   List<HistoryEntry> _history = [];
+  final List<Function(List<HistoryEntry>)> _historyListeners = [];
 
   List<HistoryEntry> get history => _history;
 
@@ -99,14 +151,23 @@ class HistoryService {
     final history = instance._history;
 
     // If the entry is not in the history, add it.
-    if (!history.contains(media)) {
+    final exists =
+        history.firstWhereOrNull((element) => element.id == media.id);
+
+    if (exists == null) {
       history.add(media);
     }
 
-    // Update the progress of the media.
-    history
-        .firstWhere((element) => element.id == media.id)
-        .progress[episodeNum] = progress;
+    // Update the media.
+    // Get the element from the history.
+    final element = history.firstWhere((element) => element.id == media.id);
+
+    // Update the progress.
+    element.progress[episodeNum] = progress;
+    // Update the sources.
+    element.sources[episodeNum] = media.sources[episodeNum]!;
+    // Update the subtitles.
+    element.subtitles[episodeNum] = media.subtitles[episodeNum]!;
 
     _storage.write(
       key: "history",
@@ -115,6 +176,8 @@ class HistoryService {
 
     // Print the current history.
     prints("History: $history");
+
+    await notifyListeners();
   }
 
   static Future<void> removeMedia(HistoryEntry media) async {
@@ -123,6 +186,7 @@ class HistoryService {
 
     history.remove(media);
     _storage.write(key: "history", value: jsonEncode(history));
+    await notifyListeners();
   }
 
   static Future<List<HistoryEntry>> getHistory() async {
@@ -135,11 +199,36 @@ class HistoryService {
 
     instance._history.clear();
     _storage.delete(key: "history");
+    await notifyListeners();
   }
 
   static Future<HistoryEntry?> getMedia(String id) async {
     final instance = await _getInstance();
 
     return instance._history.firstWhereOrNull((element) => element.id == id);
+  }
+
+  static Future<void> registerListener(
+    Function(List<HistoryEntry>) listener,
+  ) async {
+    final instance = await _getInstance();
+
+    instance._historyListeners.add(listener);
+  }
+
+  static Future<void> unregisterListener(
+    Function(List<HistoryEntry>) listener,
+  ) async {
+    final instance = await _getInstance();
+
+    instance._historyListeners.remove(listener);
+  }
+
+  static Future<void> notifyListeners() async {
+    final instance = await _getInstance();
+
+    for (final element in instance._historyListeners) {
+      element(instance._history);
+    }
   }
 }

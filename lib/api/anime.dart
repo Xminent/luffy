@@ -3,6 +3,7 @@ import "package:html/parser.dart";
 import "package:luffy/api/extractors/animeflix.dart";
 import "package:luffy/api/extractors/animepahe.dart";
 import "package:luffy/api/extractors/gogoanime.dart";
+import "package:luffy/api/extractors/nineanime.dart";
 import "package:luffy/api/extractors/superstream.dart";
 import "package:luffy/util/subtitle.dart";
 
@@ -39,19 +40,48 @@ class Subtitle {
     required this.text,
     required this.format,
   });
+  Subtitle.fromJson(Map<String, dynamic> json)
+      : text = json["text"],
+        format = SubtitleFormat.values.firstWhere(
+          (e) => e.toString() == json["format"],
+        );
 
   final String text;
   final SubtitleFormat format;
+
+  Map<String, dynamic> toJson() {
+    return {
+      "text": text,
+      "format": format.toString(),
+    };
+  }
 }
 
 class VideoSource {
   const VideoSource({
     required this.videoUrl,
+    required this.description,
     this.subtitle,
   });
 
+  VideoSource.fromJson(Map<String, dynamic> json)
+      : videoUrl = json["videoUrl"],
+        description = json["description"],
+        subtitle = json["subtitle"] != null
+            ? Subtitle.fromJson(json["subtitle"])
+            : null;
+
   final String videoUrl;
+  final String description;
   final Subtitle? subtitle;
+
+  Map<String, dynamic> toJson() {
+    return {
+      "videoUrl": videoUrl,
+      "description": description,
+      "subtitle": subtitle?.toJson(),
+    };
+  }
 }
 
 abstract class AnimeExtractor {
@@ -69,7 +99,7 @@ abstract class AnimeExtractor {
 
   /// Get the video url for the given [episode].
   /// Returns a [Tuple2<String, Subtitle?] of the video url and its subtitle if available or null if not found.
-  Future<VideoSource?> getVideoUrl(Episode episode);
+  Future<List<VideoSource>> getSources(Episode episode);
 }
 
 abstract class AnimeParser {
@@ -105,4 +135,5 @@ final sources = [
   AnimePaheExtractor(),
   GogoAnimeExtractor(),
   SuperStreamExtractor(),
+  NineAnimeExtractor(),
 ];

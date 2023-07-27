@@ -1,6 +1,7 @@
 import "package:flutter/foundation.dart";
 import "package:flutter/material.dart";
 import "package:flutter_inappwebview/flutter_inappwebview.dart";
+import "package:luffy/api/anime.dart";
 import "package:luffy/screens/video_player.dart";
 import "package:url_launcher/url_launcher.dart";
 
@@ -186,10 +187,15 @@ class _AnimeBrowserState extends State<AnimeBrowser> {
                               showTitle: "Video",
                               episode: 0,
                               episodeTitle: "Video",
-                              url: url,
                               sourceName: "Anime Browser",
                               imageUrl: "",
                               totalEpisodes: 0,
+                              sourceFetcher: () async => [
+                                VideoSource(
+                                  videoUrl: url,
+                                  description: "Anime Browser",
+                                )
+                              ],
                             ),
                           ),
                         );

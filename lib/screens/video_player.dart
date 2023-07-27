@@ -16,24 +16,22 @@ class VideoPlayerScreen extends StatefulWidget {
     required this.showTitle,
     required this.episode,
     required this.episodeTitle,
-    required this.url,
     required this.sourceName,
-    this.subtitle,
     this.savedProgress,
     required this.imageUrl,
     required this.totalEpisodes,
+    required this.sourceFetcher,
   });
 
   final String showId;
   final String showTitle;
   final int episode;
   final String episodeTitle;
-  final String url;
   final String sourceName;
-  final Subtitle? subtitle;
   final double? savedProgress;
   final String? imageUrl;
   final int totalEpisodes;
+  final Future<List<VideoSource>> Function() sourceFetcher;
 
   @override
   State<VideoPlayerScreen> createState() => _VideoPlayerScreenState();
@@ -53,6 +51,12 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
   Ticker? _ticker;
   int _secondsOnScreen = 0;
   bool _hasResumed = false;
+  VideoSource? _currentSource;
+  List<VideoSource>? _sources;
+  Subtitle? _currentSubtitle;
+  List<Subtitle?>? _subtitles;
+  Duration _positionBeforeSourceChange = Duration.zero;
+  bool _hasResumedFromSourceChange = true;
 
   void _onRewind() {
     _player.seek(
@@ -94,6 +98,27 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     _player.setRate(speed);
   }
 
+  void _onSourceChanged(VideoSource source) {
+    prints("VideoPlayer source changed to ${source.description}");
+
+    _player.open(
+      Media(
+        source.videoUrl,
+      ),
+    );
+
+    setState(() {
+      _positionBeforeSourceChange = _position;
+      _hasResumedFromSourceChange = false;
+    });
+  }
+
+  void _onSubtitleChanged(Subtitle? subtitle) {
+    setState(() {
+      _currentSubtitle = subtitle;
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -108,6 +133,53 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     Wakelock.enable();
 
     Future.microtask(() async {
+      // Look up the history and see if the sources' lastSourceUpdated is within 1 hour.
+      final history = await HistoryService.getMedia(widget.showId);
+
+      final sources = await (() async {
+        if (history != null &&
+            history.sources.containsKey(widget.episode) &&
+            history.sources[widget.episode]!.isNotEmpty &&
+            history.sourceExpiration.isAfter(DateTime.now())) {
+          prints(
+            "Using cached sources for ${widget.showTitle} episode ${widget.episode}",
+          );
+          return history.sources[widget.episode]!;
+        }
+
+        return widget.sourceFetcher();
+      })();
+
+      // Sometimes it can take too long to fetch the sources and the user has already left the screen.
+      if (!mounted) {
+        return;
+      }
+
+      if (sources.isEmpty) {
+        prints(
+          "No sources found for ${widget.showTitle} episode ${widget.episode}",
+        );
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              "No sources found for ${widget.showTitle} episode ${widget.episode}",
+            ),
+          ),
+        );
+
+        Navigator.pop(context);
+
+        return;
+      }
+
+      setState(() {
+        _currentSource = sources.first;
+        _currentSubtitle = sources.first.subtitle;
+        _sources = sources;
+        _subtitles = sources.map((source) => source.subtitle).toList();
+      });
+
       _controller = await VideoController.create(
         _player,
       );
@@ -132,6 +204,19 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
 
             setState(() {
               _hasResumed = true;
+            });
+          }
+
+          if (!event &&
+              !_hasResumedFromSourceChange &&
+              _duration != Duration.zero) {
+            prints("Seeking to $_positionBeforeSourceChange");
+            _player.seek(
+              _positionBeforeSourceChange,
+            );
+
+            setState(() {
+              _hasResumedFromSourceChange = true;
             });
           }
         });
@@ -181,7 +266,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
 
       await _player.open(
         Media(
-          widget.url,
+          sources.first.videoUrl,
         ),
       );
     });
@@ -233,13 +318,18 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
                   sourceName: widget.sourceName,
                   fit: _fit,
                   speed: _speed,
-                  subtitle: widget.subtitle,
+                  subtitle: _currentSubtitle,
+                  subtitles: _subtitles,
                   onProgressChanged: _onProgressChanged,
                   onRewind: _onRewind,
                   onPlayPause: _onPlayPause,
                   onFastForward: _onFastForward,
                   onFitChanged: _onFitChanged,
                   onSpeedChanged: _onSpeedChanged,
+                  source: _currentSource,
+                  sources: _sources,
+                  onSourceChanged: _onSourceChanged,
+                  onSubtitleChanged: _onSubtitleChanged,
                 ),
               ],
             ),
@@ -269,6 +359,13 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
           imageUrl: widget.imageUrl ?? "",
           progress: {},
           totalEpisodes: widget.totalEpisodes,
+          sources: {
+            widget.episode: _sources ?? [],
+          },
+          subtitles: {
+            widget.episode: _subtitles?.whereType<Subtitle>().toList() ?? [],
+          },
+          sourceExpiration: DateTime.now().add(const Duration(hours: 1)),
         ),
         widget.episode,
         progress,

@@ -278,6 +278,7 @@ Future<VideoSource?> _getVideoUrl(Uri watchUri, {String? currentSource}) async {
 
     return VideoSource(
       videoUrl: videoUrl,
+      description: source,
     );
   } on DioError {
     return null;
@@ -350,7 +351,7 @@ class AnimeFlixExtractor extends AnimeExtractor {
   }
 
   @override
-  Future<VideoSource?> getVideoUrl(Episode episode) async {
+  Future<List<VideoSource>> getSources(Episode episode) async {
     final episodeData = EpisodeData.fromJson(jsonDecode(episode.url));
     final slug = episodeData.slug;
     final number = episodeData.number;
@@ -370,14 +371,14 @@ class AnimeFlixExtractor extends AnimeExtractor {
         final servers = sourceUrl.queryParameters["servers"];
 
         if (firstServer == null || servers == null) {
-          return null;
+          return [];
         }
 
         final firstServerIdx = _servers.indexOf(firstServer);
         var videoRes = await _getVideoUrl(sourceUrl, currentSource: source);
 
         if (firstServerIdx == -1 || videoRes != null) {
-          return videoRes;
+          return [videoRes!];
         }
 
         // If our previous thing failed it means the first one failed so start with the next 1 we have.
@@ -400,7 +401,7 @@ class AnimeFlixExtractor extends AnimeExtractor {
           );
 
           if (videoRes != null) {
-            return videoRes;
+            return [videoRes];
           }
         }
       }
@@ -408,6 +409,6 @@ class AnimeFlixExtractor extends AnimeExtractor {
       prints("Failed to get video url AnimeFlix: $e");
     }
 
-    return null;
+    return [];
   }
 }

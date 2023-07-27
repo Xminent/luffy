@@ -1,5 +1,6 @@
 import "package:cached_network_image/cached_network_image.dart";
 import "package:flutter/material.dart";
+import "package:flutter_svg/flutter_svg.dart";
 import "package:intl/intl.dart";
 import "package:luffy/api/mal.dart";
 
@@ -71,14 +72,42 @@ class AnimeInfo extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            anime.title,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  anime.title,
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              Flexible(
+                                child: anime.id != -1
+                                    ? SvgPicture.asset(
+                                        "assets/images/mal.svg",
+                                        colorFilter: const ColorFilter.mode(
+                                          Color.fromARGB(255, 46, 81, 162),
+                                          BlendMode.srcIn,
+                                        ),
+                                        width: 24,
+                                        height: 24,
+                                      )
+                                    : Icon(
+                                        Icons.history_outlined,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withOpacity(0.5),
+                                        size: 24,
+                                      ),
+                              )
+                            ],
                           ),
                           Text("$startDate - $endDate"),
                           Row(

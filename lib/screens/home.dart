@@ -18,6 +18,12 @@ class _HomeScreenState extends State<HomeScreen>
     with AutomaticKeepAliveClientMixin {
   late Future<AnimeList?> _animeListFuture;
 
+  void _onHistoryUpdate(List<HistoryEntry> e) {
+    setState(() {
+      _animeListFuture = _getAnimeList();
+    });
+  }
+
   final List<String> _tabNames = [
     "Watching",
     "Plan to Watch",
@@ -117,6 +123,8 @@ class _HomeScreenState extends State<HomeScreen>
   void initState() {
     super.initState();
     _animeListFuture = _getAnimeList();
+
+    HistoryService.registerListener(_onHistoryUpdate);
   }
 
   @override
@@ -360,6 +368,12 @@ class _HomeScreenState extends State<HomeScreen>
         );
       },
     );
+  }
+
+  @override
+  void dispose() {
+    HistoryService.unregisterListener(_onHistoryUpdate);
+    super.dispose();
   }
 
   @override

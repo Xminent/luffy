@@ -5,6 +5,7 @@ import "package:flutter_volume_controller/flutter_volume_controller.dart";
 import "package:luffy/api/anime.dart";
 import "package:luffy/components/progress_bar.dart";
 import "package:luffy/components/video_player_icon.dart";
+import "package:luffy/components/video_player_source.dart";
 import "package:luffy/components/video_player_speed.dart";
 import "package:luffy/util.dart";
 import "package:luffy/util/subtitle_controller.dart";
@@ -26,6 +27,7 @@ class ControlsOverlay extends StatefulWidget {
     required this.sourceName,
     required this.fit,
     required this.subtitle,
+    required this.subtitles,
     required this.speed,
     required this.onProgressChanged,
     required this.onPlayPause,
@@ -33,6 +35,10 @@ class ControlsOverlay extends StatefulWidget {
     required this.onRewind,
     required this.onFitChanged,
     required this.onSpeedChanged,
+    required this.source,
+    required this.sources,
+    required this.onSourceChanged,
+    required this.onSubtitleChanged,
   });
 
   final bool isBuffering;
@@ -48,12 +54,17 @@ class ControlsOverlay extends StatefulWidget {
   final BoxFit fit;
   final double speed;
   final Subtitle? subtitle;
+  final List<Subtitle?>? subtitles;
   final ValueChanged<Duration> onProgressChanged;
   final void Function() onFastForward;
   final void Function() onPlayPause;
   final void Function() onRewind;
   final ValueChanged<BoxFit> onFitChanged;
   final ValueChanged<double> onSpeedChanged;
+  final VideoSource? source;
+  final List<VideoSource>? sources;
+  final ValueChanged<VideoSource> onSourceChanged;
+  final ValueChanged<Subtitle?> onSubtitleChanged;
 
   @override
   State<ControlsOverlay> createState() => _ControlsOverlayState();
@@ -412,7 +423,17 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
                                     VideoPlayerSpeedIcon(
                                       speed: widget.speed,
                                       onSpeedChanged: widget.onSpeedChanged,
-                                    )
+                                    ),
+                                    if (widget.sources != null)
+                                      VideoPlayerSourceIcon(
+                                        source: widget.source!,
+                                        sources: widget.sources!,
+                                        subtitle: widget.subtitle,
+                                        subtitles: widget.subtitles,
+                                        onSourceChanged: widget.onSourceChanged,
+                                        onSubtitleChanged:
+                                            widget.onSubtitleChanged,
+                                      ),
                                   ],
                                 ),
                               ),
@@ -619,6 +640,8 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
 
     final subtitle = widget.subtitle;
 
+    prints("Subtitle: $subtitle");
+
     if (subtitle != null) {
       _subtitleController = SubtitleController.string(
         subtitle.text,
@@ -644,6 +667,27 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
         _volume = value;
       });
     });
+  }
+
+  @override
+  void didUpdateWidget(covariant ControlsOverlay oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (widget.subtitle == oldWidget.subtitle) {
+      return;
+    }
+
+    final subtitle = widget.subtitle;
+
+    prints("Subtitle: $subtitle");
+
+    if (subtitle != null) {
+      _subtitleController = SubtitleController.string(
+        subtitle.text,
+        format: subtitle.format,
+        offset: _subtitleOffset,
+      );
+    }
   }
 
   @override

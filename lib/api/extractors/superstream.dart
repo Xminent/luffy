@@ -710,6 +710,8 @@ class MovieData {
 
 class _SuperStream {
   static Future<List<Media>?> search(String query) async {
+    query = query.toLowerCase().replaceAll('"', "");
+
     final apiQuery =
         """{"childmode":"0","app_version":"$_appVersion","appid":"$_appId2","module":"Search3","channel":"Website","page":"1","lang":"en","type":"all","keyword":"$query","pagelimit":"20","expired_date":"${_getExpiryDate()}","platform":"android"}""";
 
@@ -797,6 +799,9 @@ class _SuperStream {
       (x) => x.path != null && x.path!.isNotEmpty,
     );
 
+    final description =
+        "${formatBytes(source?.sizeBytes ?? 0, 2)} ${source?.quality}";
+
     final path = source?.path?.replaceAll(r"\/", "");
 
     if (path == null) {
@@ -808,7 +813,10 @@ class _SuperStream {
         linkData.list.firstWhereOrNull((element) => element.fid != null)?.fid;
 
     if (fid == null) {
-      return VideoSource(videoUrl: path);
+      return VideoSource(
+        videoUrl: path,
+        description: description,
+      );
     }
 
     final subtitleQuery = isMovie
@@ -822,7 +830,10 @@ class _SuperStream {
     ).list;
 
     if (subtitles.isEmpty) {
-      return VideoSource(videoUrl: path);
+      return VideoSource(
+        videoUrl: path,
+        description: description,
+      );
     }
 
     for (final subtitle in subtitles) {
@@ -851,6 +862,7 @@ class _SuperStream {
 
           return VideoSource(
             videoUrl: path,
+            description: description,
             subtitle: Subtitle(text: text, format: SubtitleFormat.srt),
           );
         } catch (e) {
@@ -859,7 +871,10 @@ class _SuperStream {
       }
     }
 
-    return VideoSource(videoUrl: path);
+    return VideoSource(
+      videoUrl: path,
+      description: description,
+    );
   }
 }
 
@@ -953,11 +968,11 @@ class SuperStreamExtractor extends AnimeExtractor {
   }
 
   @override
-  Future<VideoSource?> getVideoUrl(Episode episode) async {
+  Future<List<VideoSource>> getSources(Episode episode) async {
     final source = await _SuperStream.getSeriesEpisodeVideoUrl(
       LinkData.fromJson(jsonDecode(episode.url)),
     );
 
-    return source;
+    return source != null ? [source] : [];
   }
 }

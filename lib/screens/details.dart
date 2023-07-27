@@ -103,35 +103,21 @@ class _DetailsScreenState extends State<DetailsScreen>
       return;
     }
 
-    final source = await _extractor.getVideoUrl(episode);
-
-    if (source == null) {
-      // ignore: use_build_context_synchronously
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Failed to get video url"),
-          duration: Duration(seconds: 1),
-        ),
-      );
-      return;
-    }
-
     final episodeProgress = animeInfo.episodeProgress[idx];
 
     // ignore: use_build_context_synchronously
     final progress = await Navigator.of(context).push<double>(
       MaterialPageRoute(
         builder: (_) => VideoPlayerScreen(
-          showId: widget.animeId,
+          showId: "${_extractor.name}-${widget.animeId}",
           showTitle: widget.title,
           episode: idx + 1,
           episodeTitle: episode.title ?? "Untitled",
-          url: source.videoUrl,
           sourceName: _extractor.name,
-          subtitle: source.subtitle,
           savedProgress: episodeProgress,
           imageUrl: animeInfo.anime?.imageUrl,
           totalEpisodes: animeInfo.totalEpisodes ?? widget.totalEpisodes ?? 0,
+          sourceFetcher: () => _extractor.getSources(episode),
         ),
       ),
     );

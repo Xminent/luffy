@@ -492,13 +492,15 @@ class AnimePaheExtractor extends AnimeExtractor {
   }
 
   @override
-  Future<VideoSource?> getVideoUrl(Episode episode) async {
+  Future<List<VideoSource>> getSources(Episode episode) async {
     final links = await AnimePahe.extractVideoLinks(episode);
-
-    if (links.isEmpty) {
-      return null;
-    }
-
-    return VideoSource(videoUrl: links.first);
+    return links
+        .map(
+          (e) => VideoSource(
+            videoUrl: e,
+            description: "AnimePahe",
+          ),
+        )
+        .toList();
   }
 }

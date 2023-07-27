@@ -2,6 +2,7 @@ import "package:cached_network_image/cached_network_image.dart";
 import "package:flutter/material.dart";
 import "package:luffy/api/anime.dart";
 import "package:luffy/screens/details_sources.dart";
+import "package:luffy/util.dart";
 
 class SearchScreenSources extends StatefulWidget {
   const SearchScreenSources({super.key});
@@ -21,7 +22,9 @@ class _SearchScreenSourcesState extends State<SearchScreenSources>
 
     // Iterate through every source and add an entry into the map for its results.
     for (final source in sources) {
+      prints("Searching ${source.name} for $query");
       final sourceResults = await source.search(query);
+      prints("Found ${sourceResults.length} results for ${source.name}");
 
       results[source.name] = sourceResults;
     }
