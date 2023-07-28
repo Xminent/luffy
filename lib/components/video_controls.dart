@@ -23,7 +23,7 @@ class ControlsOverlay extends StatefulWidget {
     required this.size,
     required this.showTitle,
     required this.episodeTitle,
-    required this.episode,
+    required this.episodeNum,
     required this.sourceName,
     required this.fit,
     required this.subtitle,
@@ -35,10 +35,12 @@ class ControlsOverlay extends StatefulWidget {
     required this.onRewind,
     required this.onFitChanged,
     required this.onSpeedChanged,
+    required this.episodes,
     required this.source,
     required this.sources,
     required this.onSourceChanged,
     required this.onSubtitleChanged,
+    required this.onEpisodeNumChanged,
   });
 
   final bool isBuffering;
@@ -49,7 +51,7 @@ class ControlsOverlay extends StatefulWidget {
   final Size size;
   final String showTitle;
   final String episodeTitle;
-  final int episode;
+  final int episodeNum;
   final String sourceName;
   final BoxFit fit;
   final double speed;
@@ -61,10 +63,12 @@ class ControlsOverlay extends StatefulWidget {
   final void Function() onRewind;
   final ValueChanged<BoxFit> onFitChanged;
   final ValueChanged<double> onSpeedChanged;
+  final List<Episode>? episodes;
   final VideoSource? source;
   final List<VideoSource>? sources;
   final ValueChanged<VideoSource> onSourceChanged;
   final ValueChanged<Subtitle?> onSubtitleChanged;
+  final ValueChanged<int> onEpisodeNumChanged;
 
   @override
   State<ControlsOverlay> createState() => _ControlsOverlayState();
@@ -289,6 +293,7 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
     final height = MediaQuery.of(context).size.height;
 
     final showControls = _showControls && !_controlsLocked;
+    final moreEpisodes = widget.episodeNum < (widget.episodes?.length ?? 0);
 
     return Center(
       child: Stack(
@@ -434,6 +439,16 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
                                         onSubtitleChanged:
                                             widget.onSubtitleChanged,
                                       ),
+                                    if (moreEpisodes)
+                                      VideoPlayerIcon(
+                                        icon: Icons.skip_next,
+                                        onPressed: () {
+                                          widget.onEpisodeNumChanged(
+                                            widget.episodeNum,
+                                          );
+                                        },
+                                        label: "Next Episode",
+                                      ),
                                   ],
                                 ),
                               ),
@@ -456,7 +471,7 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              '${widget.showTitle} "E${widget.episode}" ${widget.episodeTitle}',
+                              '${widget.showTitle} "E${widget.episodeNum}" ${widget.episodeTitle}',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,

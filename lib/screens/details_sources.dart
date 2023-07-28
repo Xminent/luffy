@@ -97,13 +97,13 @@ class _DetailsScreenSourcesState extends State<DetailsScreenSources>
         builder: (_) => VideoPlayerScreen(
           showId: widget.animeId,
           showTitle: widget.title,
-          episode: idx + 1,
-          episodeTitle: episode.title ?? "Untitled",
+          episode: episode,
+          episodeNum: idx + 1,
           sourceName: widget.extractor.name,
           savedProgress: episodeProgress,
           imageUrl: widget.imageUrl ?? animeInfo.anime?.imageUrl,
-          totalEpisodes: animeInfo.totalEpisodes ?? widget.totalEpisodes ?? 0,
-          sourceFetcher: () => widget.extractor.getSources(episode),
+          episodes: animeInfo.episodes,
+          sourceFetcher: (Episode e) => widget.extractor.getSources(e),
         ),
       ),
     );

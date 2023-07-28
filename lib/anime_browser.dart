@@ -185,12 +185,16 @@ class _AnimeBrowserState extends State<AnimeBrowser> {
                             builder: (context) => VideoPlayerScreen(
                               showId: "test",
                               showTitle: "Video",
-                              episode: 0,
-                              episodeTitle: "Video",
+                              episode: Episode(
+                                title: "Video",
+                                url: "",
+                                thumbnailUrl: null,
+                              ),
+                              episodeNum: 0,
                               sourceName: "Anime Browser",
                               imageUrl: "",
-                              totalEpisodes: 0,
-                              sourceFetcher: () async => [
+                              episodes: const [],
+                              sourceFetcher: (Episode e) async => [
                                 VideoSource(
                                   videoUrl: url,
                                   description: "Anime Browser",

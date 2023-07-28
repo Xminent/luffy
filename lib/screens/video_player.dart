@@ -7,7 +7,6 @@ import "package:luffy/components/video_controls.dart";
 import "package:luffy/util.dart";
 import "package:media_kit/media_kit.dart";
 import "package:media_kit_video/media_kit_video.dart";
-import "package:wakelock/wakelock.dart";
 
 class VideoPlayerScreen extends StatefulWidget {
   const VideoPlayerScreen({
@@ -15,23 +14,23 @@ class VideoPlayerScreen extends StatefulWidget {
     required this.showId,
     required this.showTitle,
     required this.episode,
-    required this.episodeTitle,
+    required this.episodeNum,
     required this.sourceName,
     this.savedProgress,
     required this.imageUrl,
-    required this.totalEpisodes,
+    required this.episodes,
     required this.sourceFetcher,
   });
 
   final String showId;
   final String showTitle;
-  final int episode;
-  final String episodeTitle;
+  final Episode episode;
+  final int episodeNum;
   final String sourceName;
   final double? savedProgress;
   final String? imageUrl;
-  final int totalEpisodes;
-  final Future<List<VideoSource>> Function() sourceFetcher;
+  final List<Episode> episodes;
+  final Future<List<VideoSource>> Function(Episode) sourceFetcher;
 
   @override
   State<VideoPlayerScreen> createState() => _VideoPlayerScreenState();
@@ -40,7 +39,7 @@ class VideoPlayerScreen extends StatefulWidget {
 class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     with TickerProviderStateMixin {
   final Player _player = Player();
-  VideoController? _controller;
+  late final VideoController _controller = VideoController(_player);
   BoxFit _fit = BoxFit.contain;
   bool _isBuffering = true;
   bool _isPlaying = false;
@@ -57,6 +56,8 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
   List<Subtitle?>? _subtitles;
   Duration _positionBeforeSourceChange = Duration.zero;
   bool _hasResumedFromSourceChange = true;
+  late int _currentEpisodeNum = widget.episodeNum;
+  bool _isRequestInProgress = false;
 
   void _onRewind() {
     _player.seek(
@@ -119,6 +120,68 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     });
   }
 
+  void _onEpisodeNumChanged(int episodeNum) {
+    if (!mounted || _isRequestInProgress) {
+      return;
+    }
+
+    prints(
+      "VideoPlayer episode changed to ${widget.episodes[episodeNum - 1].title}",
+    );
+
+    _isRequestInProgress = true;
+
+    setState(() {
+      _currentEpisodeNum = episodeNum;
+      _positionBeforeSourceChange = Duration.zero;
+      _hasResumedFromSourceChange = false;
+      _isBuffering = true;
+    });
+
+    _player.stop();
+
+    // Really long network request.
+    widget
+        .sourceFetcher(
+      widget.episodes[episodeNum - 1],
+    )
+        .then((sources) {
+      if (!mounted) {
+        return;
+      }
+
+      if (sources.isEmpty) {
+        prints(
+          "No sources found for ${widget.showTitle} episode $episodeNum",
+        );
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              "No sources found for ${widget.showTitle} episode $episodeNum",
+            ),
+          ),
+        );
+
+        Navigator.pop(context);
+
+        return;
+      }
+
+      setState(() {
+        _sources = sources;
+        _currentSource = sources[0];
+        _isRequestInProgress = false;
+      });
+
+      _player.open(
+        Media(
+          sources[0].videoUrl,
+        ),
+      );
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -130,24 +193,22 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
       DeviceOrientation.landscapeRight,
     ]);
 
-    Wakelock.enable();
-
     Future.microtask(() async {
       // Look up the history and see if the sources' lastSourceUpdated is within 1 hour.
       final history = await HistoryService.getMedia(widget.showId);
 
       final sources = await (() async {
         if (history != null &&
-            history.sources.containsKey(widget.episode) &&
-            history.sources[widget.episode]!.isNotEmpty &&
+            history.sources.containsKey(widget.episodeNum) &&
+            history.sources[widget.episodeNum]!.isNotEmpty &&
             history.sourceExpiration.isAfter(DateTime.now())) {
           prints(
-            "Using cached sources for ${widget.showTitle} episode ${widget.episode}",
+            "Using cached sources for ${widget.showTitle} episode ${widget.episodeNum}",
           );
-          return history.sources[widget.episode]!;
+          return history.sources[widget.episodeNum]!;
         }
 
-        return widget.sourceFetcher();
+        return widget.sourceFetcher(widget.episodes[_currentEpisodeNum - 1]);
       })();
 
       // Sometimes it can take too long to fetch the sources and the user has already left the screen.
@@ -157,13 +218,13 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
 
       if (sources.isEmpty) {
         prints(
-          "No sources found for ${widget.showTitle} episode ${widget.episode}",
+          "No sources found for ${widget.showTitle} episode ${widget.episodeNum}",
         );
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              "No sources found for ${widget.showTitle} episode ${widget.episode}",
+              "No sources found for ${widget.showTitle} episode ${widget.episodeNum}",
             ),
           ),
         );
@@ -174,17 +235,18 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
       }
 
       setState(() {
+        _currentEpisodeNum = widget.episodeNum;
         _currentSource = sources.first;
         _currentSubtitle = sources.first.subtitle;
         _sources = sources;
         _subtitles = sources.map((source) => source.subtitle).toList();
       });
 
-      _controller = await VideoController.create(
-        _player,
-      );
+      _player.stream.buffering.listen((event) {
+        if (!mounted) {
+          return;
+        }
 
-      _player.streams.buffering.listen((event) {
         setState(() {
           _isBuffering = event;
 
@@ -222,19 +284,31 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
         });
       });
 
-      _player.streams.buffer.listen((event) {
+      _player.stream.buffer.listen((event) {
+        if (!mounted) {
+          return;
+        }
+
         setState(() {
           _buffered = event;
         });
       });
 
-      _player.streams.duration.listen((event) {
+      _player.stream.duration.listen((event) {
+        if (!mounted) {
+          return;
+        }
+
         setState(() {
           _duration = event;
         });
       });
 
-      _player.streams.playing.listen((event) {
+      _player.stream.playing.listen((event) {
+        if (!mounted) {
+          return;
+        }
+
         setState(() {
           // Start counting the user's time on screen.
 
@@ -252,13 +326,21 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
         });
       });
 
-      _player.streams.position.listen((event) {
+      _player.stream.position.listen((event) {
+        if (!mounted) {
+          return;
+        }
+
         setState(() {
           _position = event;
         });
       });
 
-      _player.streams.rate.listen((event) {
+      _player.stream.rate.listen((event) {
+        if (!mounted) {
+          return;
+        }
+
         setState(() {
           _speed = event;
         });
@@ -295,9 +377,9 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
                   child: FittedBox(
                     fit: _fit,
                     child: SizedBox(
-                      width: _controller?.rect.value?.width ??
+                      width: _controller.rect.value?.width ??
                           MediaQuery.of(context).size.width,
-                      height: _controller?.rect.value?.height ??
+                      height: _controller.rect.value?.height ??
                           MediaQuery.of(context).size.height,
                       child: Video(
                         controller: _controller,
@@ -311,10 +393,11 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
                   duration: _duration,
                   position: _position,
                   buffered: _buffered,
-                  size: _controller?.rect.value?.size ?? Size.zero,
+                  size: _controller.rect.value?.size ?? Size.zero,
                   showTitle: widget.showTitle,
-                  episodeTitle: widget.episodeTitle,
-                  episode: widget.episode,
+                  episodeTitle: widget.episodes[_currentEpisodeNum - 1].title ??
+                      "Untitled",
+                  episodeNum: _currentEpisodeNum,
                   sourceName: widget.sourceName,
                   fit: _fit,
                   speed: _speed,
@@ -326,10 +409,12 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
                   onFastForward: _onFastForward,
                   onFitChanged: _onFitChanged,
                   onSpeedChanged: _onSpeedChanged,
+                  episodes: widget.episodes,
                   source: _currentSource,
                   sources: _sources,
                   onSourceChanged: _onSourceChanged,
                   onSubtitleChanged: _onSubtitleChanged,
+                  onEpisodeNumChanged: _onEpisodeNumChanged,
                 ),
               ],
             ),
@@ -358,25 +443,24 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
           title: widget.showTitle,
           imageUrl: widget.imageUrl ?? "",
           progress: {},
-          totalEpisodes: widget.totalEpisodes,
+          totalEpisodes: widget.episodes.length,
           sources: {
-            widget.episode: _sources ?? [],
+            widget.episodeNum: _sources ?? [],
           },
           subtitles: {
-            widget.episode: _subtitles?.whereType<Subtitle>().toList() ?? [],
+            widget.episodeNum: _subtitles?.whereType<Subtitle>().toList() ?? [],
           },
           sourceExpiration: DateTime.now().add(const Duration(hours: 1)),
         ),
-        widget.episode,
+        widget.episodeNum,
         progress,
       );
 
       prints(
-        "Saved video progress for episode ${widget.episode} | Progress: $progress",
+        "Saved video progress for episode ${widget.episodeNum} | Progress: $progress",
       );
     }
 
-    _controller?.dispose();
     _player.dispose();
     _ticker?.dispose();
 
@@ -387,8 +471,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
       DeviceOrientation.landscapeLeft,
       DeviceOrientation.landscapeRight,
     ]);
-
-    Wakelock.disable();
 
     super.dispose();
   }
