@@ -1,21 +1,27 @@
 import "package:flutter/material.dart";
-import "package:luffy/components/video_player_icon.dart";
+import "package:luffy/components/video_player/control_icon.dart";
 
-class VideoPlayerSpeedIcon extends StatefulWidget {
-  const VideoPlayerSpeedIcon({
+class SliderDialogIcon extends StatefulWidget {
+  const SliderDialogIcon({
     super.key,
-    required this.speed,
-    required this.onSpeedChanged,
+    required this.title,
+    this.min = 0.0,
+    this.max = 1.0,
+    required this.value,
+    required this.onValueChanged,
   });
 
-  final double speed;
-  final ValueChanged<double> onSpeedChanged;
+  final String title;
+  final double min;
+  final double max;
+  final double value;
+  final ValueChanged<double> onValueChanged;
 
   @override
-  State<VideoPlayerSpeedIcon> createState() => _VideoPlayerSpeedIconState();
+  State<SliderDialogIcon> createState() => _SliderDialogIconState();
 }
 
-class _VideoPlayerSpeedIconState extends State<VideoPlayerSpeedIcon> {
+class _SliderDialogIconState extends State<SliderDialogIcon> {
   double _selectedSpeed = 1.0;
   bool _isConfirmButtonVisible = false;
 
@@ -72,7 +78,7 @@ class _VideoPlayerSpeedIconState extends State<VideoPlayerSpeedIcon> {
         _selectedSpeed = selectedSpeed;
       });
 
-      widget.onSpeedChanged(_selectedSpeed);
+      widget.onValueChanged(_selectedSpeed);
     }
   }
 
@@ -81,7 +87,7 @@ class _VideoPlayerSpeedIconState extends State<VideoPlayerSpeedIcon> {
     return VideoPlayerIcon(
       icon: Icons.speed,
       onPressed: _showSpeedDialog,
-      label: "Speed (${widget.speed.toStringAsFixed(2)}x)",
+      label: "Speed (${widget.value.toStringAsFixed(2)}x)",
     );
   }
 }

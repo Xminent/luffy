@@ -11,12 +11,12 @@ import "package:luffy/components/episode_list.dart";
 import "package:luffy/screens/video_player.dart";
 import "package:luffy/util.dart";
 import "package:skeletons/skeletons.dart";
-import "package:string_similarity/string_similarity.dart";
 import "package:tuple/tuple.dart";
 
 class DetailsScreenSources extends StatefulWidget {
   const DetailsScreenSources({
     super.key,
+    required this.anime,
     required this.animeId,
     required this.title,
     required this.imageUrl,
@@ -34,6 +34,7 @@ class DetailsScreenSources extends StatefulWidget {
     required this.extractor,
   });
 
+  final Anime anime;
   final String animeId;
   final String title;
   final String? imageUrl;
@@ -116,20 +117,7 @@ class _DetailsScreenSourcesState extends State<DetailsScreenSources>
   }
 
   Future<_AnimeAndEpisodes?> _getAnimeInfo() async {
-    final episodes = await (() async {
-      final results = await widget.extractor.search(widget.title);
-
-      if (results.isEmpty) {
-        return <Episode>[];
-      }
-
-      final titles = results.map((e) => e.title.toLowerCase()).toList();
-      final bestMatch =
-          results[widget.title.toLowerCase().bestMatch(titles).bestMatchIndex];
-
-      return widget.extractor.getEpisodes(bestMatch);
-    })();
-
+    final episodes = await widget.extractor.getEpisodes(widget.anime);
     final history = await HistoryService.getMedia(widget.animeId);
 
     final episodeProgress = episodes.asMap().entries.map((e) {

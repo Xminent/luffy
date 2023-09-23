@@ -57,6 +57,8 @@ class _HomeTabScreenState extends State<HomeTabScreen>
         children: _tabs,
       ),
       bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         currentIndex: _currentIndex,
         showSelectedLabels: false,
         showUnselectedLabels: false,

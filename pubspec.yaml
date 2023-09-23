@@ -42,7 +42,7 @@ dependencies:
   crypto: ^3.0.2
   intl: ^0.18.1
   custom_refresh_indicator: ^2.0.1
-  video_player: ^2.6.1
+  video_player: ^2.7.2
   screen_brightness: ^0.2.2
   flutter_volume_controller: ^1.2.5
   html: ^0.15.3

@@ -4,9 +4,9 @@ import "package:flutter/material.dart";
 import "package:flutter_volume_controller/flutter_volume_controller.dart";
 import "package:luffy/api/anime.dart";
 import "package:luffy/components/progress_bar.dart";
-import "package:luffy/components/video_player_icon.dart";
-import "package:luffy/components/video_player_source.dart";
-import "package:luffy/components/video_player_speed.dart";
+import "package:luffy/components/slider_stepper.dart";
+import "package:luffy/components/video_player/control_icon.dart";
+import "package:luffy/components/video_player/source_selector.dart";
 import "package:luffy/util.dart";
 import "package:luffy/util/subtitle_controller.dart";
 import "package:luffy/util/subtitle_view.dart";
@@ -29,12 +29,14 @@ class ControlsOverlay extends StatefulWidget {
     required this.subtitle,
     required this.subtitles,
     required this.speed,
+    required this.subtitleOffset,
     required this.onProgressChanged,
     required this.onPlayPause,
     required this.onFastForward,
     required this.onRewind,
     required this.onFitChanged,
     required this.onSpeedChanged,
+    required this.onSubtitleOffsetChanged,
     required this.episodes,
     required this.source,
     required this.sources,
@@ -57,12 +59,15 @@ class ControlsOverlay extends StatefulWidget {
   final double speed;
   final Subtitle? subtitle;
   final List<Subtitle?>? subtitles;
+  final double? subtitleOffset;
+
   final ValueChanged<Duration> onProgressChanged;
   final void Function() onFastForward;
   final void Function() onPlayPause;
   final void Function() onRewind;
   final ValueChanged<BoxFit> onFitChanged;
   final ValueChanged<double> onSpeedChanged;
+  final ValueChanged<double> onSubtitleOffsetChanged;
   final List<Episode>? episodes;
   final VideoSource? source;
   final List<VideoSource>? sources;
@@ -87,26 +92,29 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
   bool _controlsLocked = false;
   bool _unlockIconVisible = false;
   SubtitleController? _subtitleController;
-  int? _subtitleOffset;
 
   Widget _buildBrightnessIcon() {
     if (_brightness > 0.6) {
       return const Icon(Icons.brightness_high, color: Colors.white);
-    } else if (_brightness > 0.2) {
-      return const Icon(Icons.brightness_medium, color: Colors.white);
-    } else {
-      return const Icon(Icons.brightness_low, color: Colors.white);
     }
+
+    if (_brightness > 0.2) {
+      return const Icon(Icons.brightness_medium, color: Colors.white);
+    }
+
+    return const Icon(Icons.brightness_low, color: Colors.white);
   }
 
   Widget _buildVolumeIcon() {
     if (_volume > 0.6) {
       return const Icon(Icons.volume_up, color: Colors.white);
-    } else if (_volume > 0.2) {
-      return const Icon(Icons.volume_down, color: Colors.white);
-    } else {
-      return const Icon(Icons.volume_mute, color: Colors.white);
     }
+
+    if (_volume > 0.2) {
+      return const Icon(Icons.volume_down, color: Colors.white);
+    }
+
+    return const Icon(Icons.volume_mute, color: Colors.white);
   }
 
   List<Widget> _buildBrightnessControl() {
@@ -135,8 +143,10 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
                       borderRadius: BorderRadius.circular(8),
                       child: LinearProgressIndicator(
                         value: _brightness,
-                        backgroundColor: Colors.white.withOpacity(0.5),
-                        color: Colors.white,
+                        backgroundColor: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withOpacity(0.1),
                       ),
                     ),
                   ),
@@ -156,10 +166,13 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
 
     final newTimeStr = formatTime(_seek);
     final deltaTime = _seek - _lastPosition;
+    final deltaTimeMs = deltaTime.inMilliseconds;
     var deltaTimeStr = formatTime(deltaTime);
 
-    if (deltaTime.inMilliseconds > 0) {
+    if (deltaTimeMs > 0) {
       deltaTimeStr = "+$deltaTimeStr";
+    } else if (deltaTimeMs < 0) {
+      deltaTimeStr = "-$deltaTimeStr";
     }
 
     final height = MediaQuery.of(context).size.height;
@@ -204,8 +217,10 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
                       borderRadius: BorderRadius.circular(8),
                       child: LinearProgressIndicator(
                         value: _volume,
-                        backgroundColor: Colors.white.withOpacity(0.5),
-                        color: Colors.white,
+                        backgroundColor: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withOpacity(0.1),
                       ),
                     ),
                   ),
@@ -425,10 +440,54 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
                                       onPressed: _toggleFit,
                                       label: "Resize",
                                     ),
-                                    VideoPlayerSpeedIcon(
-                                      speed: widget.speed,
-                                      onSpeedChanged: widget.onSpeedChanged,
+                                    if (widget.subtitleOffset != null)
+                                      SliderStepper(
+                                        icon: Icons.subtitles,
+                                        title: "Subtitle Offset",
+                                        value: widget.subtitleOffset!,
+                                        min: -widget.duration.inMilliseconds
+                                            .toDouble(),
+                                        max: widget.duration.inMilliseconds
+                                            .toDouble(),
+                                        minStep: 100,
+                                        maxStep: 1000,
+                                        labelBuilder: (offset) =>
+                                            "Offset (${offset.toStringAsFixed(0)}ms)",
+                                        tooltipBuilder: (offset) =>
+                                            "${offset.toStringAsFixed(0)}ms",
+                                        onValueChanged: (offset) {
+                                          setState(() {
+                                            widget.onSubtitleOffsetChanged(
+                                              offset,
+                                            );
+                                          });
+                                        },
+                                      ),
+                                    SliderStepper(
+                                      icon: Icons.speed,
+                                      title: "Speed",
+                                      value: widget.speed,
+                                      original: 1.0,
+                                      labelBuilder: (speed) =>
+                                          "Speed (${speed.toStringAsFixed(2)}x)",
+                                      tooltipBuilder: (speed) =>
+                                          "${(speed * 100).toStringAsFixed(0)}%",
+                                      onValueChanged: widget.onSpeedChanged,
                                     ),
+                                    // SliderDialog(
+                                    //   value: (_subtitleOffset ?? 0).toDouble(),
+                                    //   max: widget.duration.inMilliseconds
+                                    //       .toDouble(),
+                                    //   min: 0,
+                                    //   divisions: widget.duration.inMilliseconds,
+                                    //   title: "Subtitle Offset",
+                                    //   onChanged: (value) {},
+                                    //   onConfirmed: (value) {
+                                    //     setState(() {
+                                    //       _subtitleOffset = value.toInt();
+                                    //     });
+                                    //   },
+                                    // ),
                                     if (widget.sources != null)
                                       VideoPlayerSourceIcon(
                                         source: widget.source!,
@@ -444,7 +503,7 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
                                         icon: Icons.skip_next,
                                         onPressed: () {
                                           widget.onEpisodeNumChanged(
-                                            widget.episodeNum,
+                                            widget.episodeNum + 1,
                                           );
                                         },
                                         label: "Next Episode",
@@ -464,7 +523,7 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
                         child: Column(
                           children: [
                             Text(
-                              "${widget.sourceName} source 1 - ${widget.size.width.round()}x${widget.size.height.round()}",
+                              "${widget.sourceName} source ${widget.episodeNum} - ${widget.size.width.round()}x${widget.size.height.round()}",
                               style: const TextStyle(
                                 color: Colors.white,
                               ),
@@ -586,7 +645,13 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
       return;
     }
 
-    final area = 0.6 * MediaQuery.of(context).size.width;
+    // Ignore touches that come from the edges of the screen.
+    if (details.globalPosition.dy < 0.1 * MediaQuery.of(context).size.height ||
+        details.globalPosition.dy > 0.9 * MediaQuery.of(context).size.height) {
+      return;
+    }
+
+    final area = MediaQuery.of(context).size.width;
     final durationMs = widget.duration.inMilliseconds;
 
     setState(() {
@@ -624,6 +689,7 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
 
     if (noOp) {
       return setState(() {
+        _seekDelta = 0;
         _seekVisible = false;
       });
     }
@@ -633,6 +699,7 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
     widget.onProgressChanged(_seek);
 
     setState(() {
+      _seekDelta = 0;
       _seekVisible = false;
     });
   }
@@ -654,6 +721,7 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
     super.initState();
 
     final subtitle = widget.subtitle;
+    final subtitleOffset = widget.subtitleOffset;
 
     prints("Subtitle: $subtitle");
 
@@ -661,7 +729,7 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
       _subtitleController = SubtitleController.string(
         subtitle.text,
         format: subtitle.format,
-        offset: _subtitleOffset,
+        offset: subtitleOffset?.toInt(),
       );
     }
 
@@ -688,19 +756,21 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
   void didUpdateWidget(covariant ControlsOverlay oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    if (widget.subtitle == oldWidget.subtitle) {
+    if (widget.subtitle == oldWidget.subtitle &&
+        widget.subtitleOffset == oldWidget.subtitleOffset) {
       return;
     }
 
     final subtitle = widget.subtitle;
+    final subtitleOffset = widget.subtitleOffset;
 
-    prints("Subtitle: $subtitle");
+    prints("Subtitle: $subtitle | Offset: ${widget.subtitleOffset}");
 
     if (subtitle != null) {
       _subtitleController = SubtitleController.string(
         subtitle.text,
         format: subtitle.format,
-        offset: _subtitleOffset,
+        offset: subtitleOffset?.toInt(),
       );
     }
   }

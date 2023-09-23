@@ -9,7 +9,7 @@ import "package:luffy/components/blinking_button.dart";
 import "package:luffy/components/episode_list.dart";
 import "package:luffy/components/mal_controls.dart";
 import "package:luffy/dialogs.dart";
-import "package:luffy/screens/video_player.dart";
+import "package:luffy/screens/video_player_native.dart";
 import "package:luffy/util.dart";
 import "package:skeletons/skeletons.dart";
 import "package:string_similarity/string_similarity.dart";

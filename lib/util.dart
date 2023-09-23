@@ -23,6 +23,7 @@ void prints(s1) {
     final m = match.group(0);
 
     if (m != null) {
+      // ignore: avoid_print
       print(m);
     }
   });

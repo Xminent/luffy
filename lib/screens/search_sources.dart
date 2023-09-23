@@ -54,6 +54,15 @@ class _SearchScreenSourcesState extends State<SearchScreenSources>
           );
         }
 
+        // set _resultsExpanded[index] to false if the source has no results
+        for (int i = 0; i < sources.length; i++) {
+          final results = searchResults[sources[i].name];
+
+          if (results == null || results.isEmpty) {
+            _resultsExpanded[i] = false;
+          }
+        }
+
         return SingleChildScrollView(
           child: ExpansionPanelList(
             elevation: 1,
@@ -94,6 +103,7 @@ class _SearchScreenSourcesState extends State<SearchScreenSources>
                             context,
                             MaterialPageRoute(
                               builder: (context) => DetailsScreenSources(
+                                anime: anime,
                                 animeId: "$source-${anime.url}",
                                 imageUrl: anime.imageUrl,
                                 title: anime.title,

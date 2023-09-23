@@ -1,7 +1,6 @@
-import "package:cached_network_image/cached_network_image.dart";
 import "package:flutter/material.dart";
 import "package:luffy/api/mal.dart";
-import "package:luffy/screens/details.dart";
+import "package:luffy/components/search_bar_result.dart";
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -42,10 +41,8 @@ class _SearchScreenState extends State<SearchScreen>
             itemCount: searchResults.length,
             itemBuilder: (context, index) {
               final anime = searchResults[index];
-
               final score = anime.score;
               final type = anime.type;
-
               final toShow = <Widget>[];
 
               if (score != null) {
@@ -74,72 +71,9 @@ class _SearchScreenState extends State<SearchScreen>
                 );
               }
 
-              return Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  splashColor: Colors.grey,
-                  splashFactory: InkRipple.splashFactory,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => DetailsScreen(
-                          animeId: anime.id.toString(),
-                          imageUrl: anime.imageUrl,
-                          title: anime.title,
-                        ),
-                      ),
-                    );
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    child: Row(
-                      children: [
-                        CachedNetworkImage(
-                          imageUrl: anime.imageUrl,
-                          errorWidget: (context, url, error) => Container(
-                            color: Theme.of(context).colorScheme.surface,
-                          ),
-                          height: 100,
-                          width: 100,
-                        ),
-                        const SizedBox(
-                          width: 8,
-                        ),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                anime.title,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleLarge!
-                                    .copyWith(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                              ),
-                              const SizedBox(
-                                height: 8,
-                              ),
-                              Row(
-                                children: toShow,
-                              ),
-                              const SizedBox(
-                                height: 8,
-                              ),
-                              Text(
-                                anime.synopsis,
-                                maxLines: 3,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+              return SearchResultComponent(
+                anime: anime,
+                score: score,
               );
             },
           ),

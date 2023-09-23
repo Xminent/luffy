@@ -1,6 +1,6 @@
 import "package:flutter/material.dart";
 import "package:luffy/api/anime.dart";
-import "package:luffy/components/video_player_icon.dart";
+import "package:luffy/components/video_player/control_icon.dart";
 
 class VideoPlayerSourceIcon extends StatefulWidget {
   const VideoPlayerSourceIcon({

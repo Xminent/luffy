@@ -10,8 +10,8 @@ class LoginScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     if (defaultTargetPlatform == TargetPlatform.windows) {
       return const LoginWindowsScreen();
-    } else {
-      return const LoginMobileScreen();
     }
+
+    return const LoginMobileScreen();
   }
 }

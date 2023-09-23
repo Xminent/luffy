@@ -151,16 +151,20 @@ class HistoryService {
     final history = instance._history;
 
     // If the entry is not in the history, add it.
-    final exists =
-        history.firstWhereOrNull((element) => element.id == media.id);
+    final idx = (() {
+      final ret = history.indexWhere((element) => element.id == media.id);
 
-    if (exists == null) {
-      history.add(media);
-    }
+      if (ret == -1) {
+        history.add(media);
+        return history.length - 1;
+      }
+
+      return ret;
+    })();
 
     // Update the media.
     // Get the element from the history.
-    final element = history.firstWhere((element) => element.id == media.id);
+    final element = history[idx];
 
     // Update the progress.
     element.progress[episodeNum] = progress;
@@ -168,6 +172,10 @@ class HistoryService {
     element.sources[episodeNum] = media.sources[episodeNum]!;
     // Update the subtitles.
     element.subtitles[episodeNum] = media.subtitles[episodeNum]!;
+
+    // Move the element to the front of the list.
+    history.removeAt(idx);
+    history.add(element);
 
     _storage.write(
       key: "history",

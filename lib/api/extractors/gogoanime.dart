@@ -7,7 +7,7 @@ import "package:http/http.dart" as http;
 import "package:luffy/api/anime.dart";
 import "package:luffy/util.dart";
 
-const _baseUrl = "https://gogoanime.cl";
+const _baseUrl = "https://gogoanime.gr";
 final _gogoSecretKey = Key.fromUtf8("37911490979715163134003223491201");
 final _gogoSecretKey2 = Key.fromUtf8("54674138327930866480207815084989");
 final _gogoSecretIv = IV.fromUtf8("3134003223491201");

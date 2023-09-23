@@ -5,8 +5,7 @@ import "package:luffy/api/anime.dart";
 import "package:luffy/api/history.dart";
 import "package:luffy/components/video_player/controls.dart";
 import "package:luffy/util.dart";
-import "package:media_kit/media_kit.dart";
-import "package:media_kit_video/media_kit_video.dart";
+import "package:video_player/video_player.dart";
 
 class VideoPlayerScreen extends StatefulWidget {
   const VideoPlayerScreen({
@@ -38,17 +37,11 @@ class VideoPlayerScreen extends StatefulWidget {
 
 class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     with TickerProviderStateMixin {
-  final Player _player = Player();
-  late final VideoController _controller = VideoController(_player);
+  VideoPlayerController? _controller;
   BoxFit _fit = BoxFit.contain;
   bool _isBuffering = true;
-  bool _isPlaying = false;
-  Duration _buffered = Duration.zero;
-  Duration _duration = Duration.zero;
-  Duration _position = Duration.zero;
-  double _speed = 1.0;
   Ticker? _ticker;
-  int _secondsOnScreen = 0;
+  final int _secondsOnScreen = 0;
   bool _hasResumed = false;
   VideoSource? _currentSource;
   List<VideoSource>? _sources;
@@ -61,33 +54,51 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
   bool _isRequestInProgress = false;
 
   void _onRewind() {
-    _player.seek(
+    final controller = _controller;
+
+    if (controller == null) {
+      return;
+    }
+
+    controller.seekTo(
       Duration(
-        milliseconds: (_position.inMilliseconds - 10000).clamp(
+        milliseconds: (controller.value.position.inMilliseconds - 10000).clamp(
           0,
-          _duration.inMilliseconds,
+          controller.value.duration.inMilliseconds,
         ),
       ),
     );
   }
 
   void _onPlayPause() {
-    _isPlaying ? _player.pause() : _player.play();
+    final controller = _controller;
+
+    if (controller == null) {
+      return;
+    }
+
+    controller.value.isPlaying ? controller.pause() : controller.play();
   }
 
   void _onFastForward() {
-    _player.seek(
+    final controller = _controller;
+
+    if (controller == null) {
+      return;
+    }
+
+    controller.seekTo(
       Duration(
-        milliseconds: (_position.inMilliseconds + 10000).clamp(
+        milliseconds: (controller.value.position.inMilliseconds + 10000).clamp(
           0,
-          _duration.inMilliseconds,
+          controller.value.duration.inMilliseconds,
         ),
       ),
     );
   }
 
   void _onProgressChanged(Duration position) {
-    _player.seek(position);
+    _controller?.seekTo(position);
   }
 
   void _onFitChanged(BoxFit fit) {
@@ -97,7 +108,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
   }
 
   void _onSpeedChanged(double speed) {
-    _player.setRate(speed);
+    _controller?.setPlaybackSpeed(speed);
   }
 
   void _onSubtitleOffsetChanged(double subtitleOffset) {
@@ -107,16 +118,19 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
   }
 
   void _onSourceChanged(VideoSource source) {
-    prints("VideoPlayer source changed to ${source.description}");
+    final oldPosition = _controller?.value.position;
 
-    _player.open(
-      Media(
-        source.videoUrl,
-      ),
+    if (oldPosition == null) {
+      return;
+    }
+
+    prints("VideoPlayer source changed to ${source.description}");
+    _controller = VideoPlayerController.networkUrl(
+      Uri.parse(source.videoUrl),
     );
 
     setState(() {
-      _positionBeforeSourceChange = _position;
+      _positionBeforeSourceChange = oldPosition;
       _hasResumedFromSourceChange = false;
     });
   }
@@ -149,7 +163,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
       _isBuffering = true;
     });
 
-    _player.stop();
+    _controller?.dispose();
 
     // Really long network request.
     widget
@@ -192,17 +206,22 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
         _isRequestInProgress = false;
       });
 
-      _player.open(
-        Media(
-          sources[0].videoUrl,
-        ),
+      _controller = VideoPlayerController.networkUrl(
+        Uri.parse(sources.first.videoUrl),
       );
     });
   }
 
   void _syncProgress() {
-    final progress =
-        (_position.inMilliseconds / _duration.inMilliseconds).clamp(0.0, 1.0);
+    final controller = _controller;
+
+    if (controller == null) {
+      return;
+    }
+
+    final progress = (controller.value.position.inMilliseconds /
+            controller.value.duration.inMilliseconds)
+        .clamp(0.0, 1.0);
 
     // We will only update if you have watched at least 5% of the video.
     // final minSecondsOnScreen = 0.05 * _duration.inSeconds;
@@ -309,25 +328,59 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
         _subtitles = sources.map((source) => source.subtitle).toList();
       });
 
-      _player.stream.buffering.listen((event) {
-        if (!mounted) {
+      // _player.stream.playing.listen((event) {
+      //   if (!mounted) {
+      //     return;
+      //   }
+
+      //   setState(() {
+      //     // Start counting the user's time on screen.
+
+      //     if (_ticker == null) {
+      //       _ticker = createTicker((elapsed) {
+      //         setState(() {
+      //           _secondsOnScreen = elapsed.inSeconds;
+      //         });
+      //       });
+
+      //       _ticker?.start();
+      //     }
+
+      //     _isPlaying = event;
+      //   });
+      // });
+
+      prints("VideoPlayer source changed to ${sources.first.videoUrl}");
+
+      _controller = VideoPlayerController.networkUrl(
+        Uri.parse(
+          sources.first.videoUrl,
+        ),
+      );
+
+      _controller?.addListener(() {
+        final controller = _controller;
+
+        if (!mounted || controller == null) {
           return;
         }
 
         setState(() {
-          _isBuffering = event;
+          _isBuffering = controller.value.isBuffering;
 
           final savedProgress = widget.savedProgress;
 
-          if (!event &&
+          if (!_isBuffering &&
               !_hasResumed &&
-              _duration != Duration.zero &&
+              controller.value.duration != Duration.zero &&
               savedProgress != null) {
             prints("Seeking to $savedProgress");
-            _player.seek(
+
+            controller.seekTo(
               Duration(
                 milliseconds:
-                    (_duration.inMilliseconds * savedProgress).toInt(),
+                    (controller.value.duration.inMilliseconds * savedProgress)
+                        .toInt(),
               ),
             );
 
@@ -336,11 +389,11 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
             });
           }
 
-          if (!event &&
+          if (!_isBuffering &&
               !_hasResumedFromSourceChange &&
-              _duration != Duration.zero) {
+              controller.value.duration != Duration.zero) {
             prints("Seeking to $_positionBeforeSourceChange");
-            _player.seek(
+            controller.seekTo(
               _positionBeforeSourceChange,
             );
 
@@ -351,86 +404,31 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
         });
       });
 
-      _player.stream.buffer.listen((event) {
-        if (!mounted) {
-          return;
-        }
-
-        setState(() {
-          _buffered = event;
-        });
-      });
-
-      _player.stream.duration.listen((event) {
-        if (!mounted) {
-          return;
-        }
-
-        setState(() {
-          _duration = event;
-        });
-      });
-
-      _player.stream.playing.listen((event) {
-        if (!mounted) {
-          return;
-        }
-
-        setState(() {
-          // Start counting the user's time on screen.
-
-          if (_ticker == null) {
-            _ticker = createTicker((elapsed) {
-              setState(() {
-                _secondsOnScreen = elapsed.inSeconds;
-              });
-            });
-
-            _ticker?.start();
-          }
-
-          _isPlaying = event;
-        });
-      });
-
-      _player.stream.position.listen((event) {
-        if (!mounted) {
-          return;
-        }
-
-        setState(() {
-          _position = event;
-        });
-      });
-
-      _player.stream.rate.listen((event) {
-        if (!mounted) {
-          return;
-        }
-
-        setState(() {
-          _speed = event;
-        });
-      });
-
-      prints("VideoPlayer source changed to ${sources.first.videoUrl}");
-
-      await _player.open(
-        Media(
-          sources.first.videoUrl,
-        ),
-      );
+      _controller?.initialize().then((_) => setState(() {}));
+      _controller?.play();
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    final controller = _controller;
+    final isInitialized =
+        (controller?.value.isInitialized ?? false) && controller != null;
+    final buffered = controller?.value.buffered ?? [];
+
     return WillPopScope(
       onWillPop: () async {
         prints("VideoPlayerScreen: onWillPop");
 
+        final controller = _controller;
+
+        if (controller == null) {
+          return true;
+        }
+
         // Pop it manually.
-        final progress = _position.inMilliseconds / _duration.inMilliseconds;
+        final progress = controller.value.position.inMilliseconds /
+            controller.value.duration.inMilliseconds;
 
         Navigator.pop(context, progress.isFinite ? progress : null);
 
@@ -446,30 +444,31 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
                   child: FittedBox(
                     fit: _fit,
                     child: SizedBox(
-                      width: _controller.rect.value?.width ??
-                          MediaQuery.of(context).size.width,
-                      height: _controller.rect.value?.height ??
-                          MediaQuery.of(context).size.height,
-                      child: Video(
-                        controller: _controller,
-                      ),
+                      width: controller?.value.size.width,
+                      height: controller?.value.size.height,
+                      child: isInitialized
+                          ? VideoPlayer(
+                              controller,
+                            )
+                          : Container(),
                     ),
                   ),
                 ),
                 ControlsOverlay(
                   isBuffering: _isBuffering,
-                  isPlaying: _isPlaying,
-                  duration: _duration,
-                  position: _position,
-                  buffered: _buffered,
-                  size: _controller.rect.value?.size ?? Size.zero,
+                  isPlaying: controller?.value.isPlaying ?? false,
+                  duration: controller?.value.duration ?? Duration.zero,
+                  position: controller?.value.position ?? Duration.zero,
+                  buffered:
+                      buffered.isNotEmpty ? buffered.first.end : Duration.zero,
+                  size: controller?.value.size ?? Size.zero,
                   showTitle: widget.showTitle,
                   episodeTitle: widget.episodes[_currentEpisodeNum - 1].title ??
                       "Untitled",
                   episodeNum: _currentEpisodeNum,
                   sourceName: widget.sourceName,
                   fit: _fit,
-                  speed: _speed,
+                  speed: controller?.value.playbackSpeed ?? 1.0,
                   subtitleOffset: _subtitleOffset,
                   subtitle: _currentSubtitle,
                   subtitles: _subtitles,
@@ -498,7 +497,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
   @override
   void dispose() {
     _syncProgress();
-    _player.dispose();
+    _controller?.dispose();
     _ticker?.dispose();
 
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);

@@ -5,13 +5,13 @@ class VideoPlayerIcon extends StatelessWidget {
     super.key,
     required this.icon,
     required this.onPressed,
-    required this.label,
+    this.label,
     this.color = Colors.white,
   });
 
   final IconData icon;
   final VoidCallback onPressed;
-  final String label;
+  final String? label;
   final Color color;
 
   @override
@@ -30,14 +30,16 @@ class VideoPlayerIcon extends StatelessWidget {
                 icon,
                 color: color,
               ),
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: Theme.of(context)
-                    .textTheme
-                    .labelSmall!
-                    .copyWith(color: color),
-              ),
+              if (label != null) ...[
+                const SizedBox(width: 8),
+                Text(
+                  label!,
+                  style: Theme.of(context)
+                      .textTheme
+                      .labelSmall!
+                      .copyWith(color: color),
+                ),
+              ]
             ],
           ),
         ),

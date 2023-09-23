@@ -1,3 +1,4 @@
+import "package:cached_network_image/cached_network_image.dart";
 import "package:custom_refresh_indicator/custom_refresh_indicator.dart";
 import "package:flutter/material.dart";
 import "package:luffy/api/anime.dart";
@@ -17,6 +18,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen>
     with AutomaticKeepAliveClientMixin {
   late Future<AnimeList?> _animeListFuture;
+  UserInfo? _userInfo;
 
   void _onHistoryUpdate(List<HistoryEntry> e) {
     setState(() {
@@ -85,35 +87,37 @@ class _HomeScreenState extends State<HomeScreen>
 
         animeList.watching.removeAt(index);
         animeList.watching.insert(0, anime);
-      } else {
-        final latestEpisode = historyEntry.progress.isNotEmpty
-            ? historyEntry.progress.keys.last
-            : 0;
-
-        animeList.watching.insert(
-          0,
-          AnimeListEntry(
-            id: -1,
-            title: historyEntry.title,
-            imageUrl: historyEntry.imageUrl,
-            status: AnimeListStatus.watching,
-            score: 0,
-            watchedEpisodes: latestEpisode,
-            totalEpisodes: historyEntry.totalEpisodes <= 0
-                ? null
-                : historyEntry.totalEpisodes,
-            isRewatching: false,
-            startDate: null,
-            endDate: null,
-            // NOTE: CoverImageUrl will be used for the determining of the source.
-            coverImageUrl: historyEntry.id,
-            kitsuId: null,
-            titleEnJp: "",
-            titleJaJp: "",
-            type: AnimeType.tv,
-          ),
-        );
+        continue;
       }
+
+      final latestEpisode = historyEntry.progress.keys.fold(
+        0,
+        (int prev, int curr) => curr > prev ? curr : prev,
+      );
+
+      animeList.watching.insert(
+        0,
+        AnimeListEntry(
+          id: -1,
+          title: historyEntry.title,
+          imageUrl: historyEntry.imageUrl,
+          status: AnimeListStatus.watching,
+          score: 0,
+          watchedEpisodes: latestEpisode,
+          totalEpisodes: historyEntry.totalEpisodes <= 0
+              ? null
+              : historyEntry.totalEpisodes,
+          isRewatching: false,
+          startDate: null,
+          endDate: null,
+          // NOTE: CoverImageUrl will be used for the determining of the source.
+          coverImageUrl: historyEntry.id,
+          kitsuId: null,
+          titleEnJp: "",
+          titleJaJp: "",
+          type: AnimeType.tv,
+        ),
+      );
     }
 
     return animeList;
@@ -122,9 +126,12 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void initState() {
     super.initState();
-    _animeListFuture = _getAnimeList();
 
-    HistoryService.registerListener(_onHistoryUpdate);
+    _animeListFuture = Future.microtask(() async {
+      await HistoryService.registerListener(_onHistoryUpdate);
+      _userInfo = await MalService.getUserInfo();
+      return _getAnimeList();
+    });
   }
 
   @override
@@ -160,7 +167,32 @@ class _HomeScreenState extends State<HomeScreen>
             length: _tabNames.length,
             child: Scaffold(
               appBar: AppBar(
-                title: const Text("Home"),
+                title: Row(
+                  children: [
+                    CachedNetworkImage(
+                      imageUrl: _userInfo?.picture ??
+                          "https://via.placeholder.com/150",
+                      width: 40,
+                      height: 40,
+                      fit: BoxFit.cover,
+                      errorWidget: (context, url, error) =>
+                          const Icon(Icons.error),
+                    ),
+                    const SizedBox(
+                      width: 8,
+                    ),
+                    if (_userInfo != null)
+                      Text(
+                        " (${_userInfo!.name})",
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                    const Spacer(),
+                    const Icon(Icons.more_vert),
+                    const SizedBox(
+                      width: 8,
+                    )
+                  ],
+                ),
                 bottom: TabBar(
                   isScrollable: true,
                   tabs: _tabNames.map((name) {
@@ -183,6 +215,20 @@ class _HomeScreenState extends State<HomeScreen>
 
                     return Tab(text: "$name (${toDisplay.length})");
                   }).toList(),
+                ),
+              ),
+              drawer: Drawer(
+                backgroundColor: Theme.of(context).colorScheme.surface,
+                child: ListView(
+                  padding: EdgeInsets.zero,
+                  children: [
+                    DrawerHeader(
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      child: const Text("Drawer Header"),
+                    )
+                  ],
                 ),
               ),
               body: TabBarView(
@@ -336,6 +382,11 @@ class _HomeScreenState extends State<HomeScreen>
                                         : MaterialPageRoute(
                                             builder: (context) =>
                                                 DetailsScreenSources(
+                                              anime: Anime(
+                                                title: anime.title,
+                                                imageUrl: anime.imageUrl,
+                                                url: anime.id.toString(),
+                                              ),
                                               animeId: anime.coverImageUrl!,
                                               title: anime.title,
                                               imageUrl: anime.imageUrl,

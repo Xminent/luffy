@@ -4,11 +4,11 @@ import "package:flutter/foundation.dart";
 import "package:flutter/material.dart";
 import "package:flutter/services.dart";
 import "package:flutter_inappwebview/flutter_inappwebview.dart";
+import "package:luffy/api/anime.dart";
 import "package:luffy/auth.dart";
 import "package:luffy/screens/home_tab.dart";
 import "package:luffy/screens/login.dart";
 import "package:luffy/theme.dart";
-import "package:media_kit/media_kit.dart";
 import "package:window_manager/window_manager.dart";
 
 Future main() async {
@@ -18,7 +18,7 @@ Future main() async {
     await windowManager.ensureInitialized();
   }
 
-  MediaKit.ensureInitialized();
+  // MediaKit.ensureInitialized();
 
   if (!kIsWeb &&
       kDebugMode &&
@@ -41,7 +41,7 @@ MaterialApp _buildMaterialApp({
 }) {
   return MaterialApp(
     title: "Luffy",
-    theme: lightTheme,
+    theme: darkTheme,
     darkTheme: darkTheme,
     home: home,
     routes: {
@@ -60,7 +60,9 @@ class MyApp extends StatelessWidget {
       future: MalToken.getInstance(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const CircularProgressIndicator();
+          return const Center(
+            child: CircularProgressIndicator(),
+          );
         }
 
         if (!snapshot.hasData || snapshot.data == null) {
@@ -70,15 +72,31 @@ class MyApp extends StatelessWidget {
           );
         }
 
+        final ep = Episode(
+          title: "Video",
+          url: "",
+          thumbnailUrl: null,
+        );
+
         return _buildMaterialApp(
           isAuthenticated: true,
           // home: const AnimeBrowser(),
-          // home: const VideoPlayerScreen(
-          //   showId: 0,
-          //   episode: 0,
-          //   title: "Video",
-          //   url:
-          //       "https://crunchy.animeflix.live/https://ta-005.agetcdn.com/1ab5d45273a9183bebb58eb74d5722d8ea6384f350caf008f08cf018f1f0566d0cb82a2a799830d1af97cd3f4b6a9a81ef3aed2fb783292b1abcf1b8560a1d1aa308008b88420298522a9f761e5aa1024fbe74e5aa853cfc933cd1219327d1232e91847a185021b184c027f97ae732b3708ee6beb80ba5db6628ced43f1196fe/027e9529af2b06fe7b4f47e507a787eb/ep.1.1677593055.m3u8",
+          // home: VideoPlayerScreen(
+          //   showId: "test",
+          //   episode: ep,
+          //   episodeNum: 1,
+          //   imageUrl: null,
+          //   episodes: [ep],
+          //   sourceFetcher: (episode) {
+          //     return Future.value([
+          //       const VideoSource(
+          //         videoUrl:
+          //             "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+          //         description: "test",
+          //       )
+          //     ]);
+          //   },
+          //   showTitle: "Video",
           //   sourceName: "VizCloud",
           // ),
           home: const HomeTabScreen(),

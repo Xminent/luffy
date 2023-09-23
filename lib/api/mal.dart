@@ -378,6 +378,12 @@ class MalService {
     }
   }
 
+  static Future<String?> getUserAvatar() async {
+    final userInfo = await getUserInfo();
+
+    return userInfo?.picture;
+  }
+
   static Future<bool> isLoggedIn() async {
     return const FlutterSecureStorage().containsKey(key: "access_token");
   }
@@ -915,7 +921,6 @@ class MalService {
 
         if (id == null ||
             title == null ||
-            score == null ||
             type == null ||
             synopsis == null ||
             imageUrl == null) {
@@ -927,7 +932,7 @@ class MalService {
             id: int.parse(id),
             title: title,
             imageUrl: imageUrl,
-            score: double.tryParse(score),
+            score: double.tryParse(score ?? ""),
             type: type,
             synopsis: synopsis,
           ),

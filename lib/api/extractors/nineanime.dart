@@ -10,11 +10,11 @@ import "package:luffy/api/extractors/mp4upload.dart";
 import "package:luffy/util.dart";
 import "package:tuple/tuple.dart";
 
-const _baseUrl = "https://9anime.to";
+const _baseUrl = "https://aniwave.to";
 
 Future<String> _callConsumet(String query, String action) async {
   final res = await http.get(
-    Uri.parse("https://9anime.eltik.net/$action?query=$query&apikey=aniyomi"),
+    Uri.parse("https://9anime.eltik.net/$action?query=$query&apikey=enimax"),
   );
 
   switch (action) {
