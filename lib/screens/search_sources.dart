@@ -1,4 +1,5 @@
 import "package:cached_network_image/cached_network_image.dart";
+import "package:collection/collection.dart";
 import "package:flutter/material.dart";
 import "package:luffy/api/anime.dart";
 import "package:luffy/screens/details_sources.dart";
@@ -13,151 +14,24 @@ class SearchScreenSources extends StatefulWidget {
 
 class _SearchScreenSourcesState extends State<SearchScreenSources>
     with AutomaticKeepAliveClientMixin {
-  Future<Map<String, List<Anime>>>? _searchResultsFuture;
-  final List<bool> _resultsExpanded =
-      List.generate(sources.length, (index) => true);
+  Stream<Map<String, List<Anime>>>? _searchResultsStream;
 
-  Future<Map<String, List<Anime>>> _search(String query) async {
+  Stream<Map<String, List<Anime>>> _search(String query) async* {
     final results = <String, List<Anime>>{};
 
-    // Iterate through every source and add an entry into the map for its results.
     for (final source in sources) {
       prints("Searching ${source.name} for $query");
       final sourceResults = await source.search(query);
       prints("Found ${sourceResults.length} results for ${source.name}");
 
       results[source.name] = sourceResults;
+
+      yield results;
     }
-
-    return results;
   }
 
-  Widget _buildResults() {
-    return FutureBuilder(
-      future: _searchResultsFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.none) {
-          return Container();
-        }
-
-        if (snapshot.connectionState != ConnectionState.done) {
-          return const Center(
-            child: CircularProgressIndicator(),
-          );
-        }
-
-        final searchResults = snapshot.data;
-
-        if (searchResults == null) {
-          return const Center(
-            child: Text("Could not connect with MyAnimeList."),
-          );
-        }
-
-        // set _resultsExpanded[index] to false if the source has no results
-        for (int i = 0; i < sources.length; i++) {
-          final results = searchResults[sources[i].name];
-
-          if (results == null || results.isEmpty) {
-            _resultsExpanded[i] = false;
-          }
-        }
-
-        return SingleChildScrollView(
-          child: ExpansionPanelList(
-            elevation: 1,
-            expandedHeaderPadding: EdgeInsets.zero,
-            expansionCallback: (index, isExpanded) {
-              setState(() {
-                _resultsExpanded[index] = !isExpanded;
-              });
-            },
-            children: searchResults.keys.toList().asMap().entries.map((entry) {
-              final index = entry.key;
-              final source = entry.value;
-              final isExpanded = _resultsExpanded[index];
-
-              return ExpansionPanel(
-                headerBuilder: (context, isExpanded) {
-                  return ListTile(
-                    title: Text("$source (${searchResults[source]?.length})"),
-                  );
-                },
-                body: ListView.builder(
-                  shrinkWrap: true,
-                  physics: const ClampingScrollPhysics(),
-                  itemCount: searchResults[source]?.length ?? 0,
-                  itemBuilder: (context, index) {
-                    final anime = searchResults[source]![index];
-                    final extractor = sources.firstWhere(
-                      (element) => element.name == source,
-                    );
-
-                    return Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        splashColor: Colors.grey,
-                        splashFactory: InkRipple.splashFactory,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => DetailsScreenSources(
-                                anime: anime,
-                                animeId: "$source-${anime.url}",
-                                imageUrl: anime.imageUrl,
-                                title: anime.title,
-                                extractor: extractor,
-                              ),
-                            ),
-                          );
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          child: Row(
-                            children: [
-                              CachedNetworkImage(
-                                imageUrl: anime.imageUrl,
-                                errorWidget: (context, url, error) => Container(
-                                  color: Theme.of(context).colorScheme.surface,
-                                ),
-                                height: 100,
-                                width: 100,
-                              ),
-                              const SizedBox(
-                                width: 8,
-                              ),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      anime.title,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleLarge!
-                                          .copyWith(
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-                isExpanded: isExpanded,
-              );
-            }).toList(),
-          ),
-        );
-      },
-    );
-  }
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   Widget build(BuildContext context) {
@@ -169,31 +43,137 @@ class _SearchScreenSourcesState extends State<SearchScreenSources>
           title: const Text("Search Sources"),
         ),
         body: Container(
-          padding: const EdgeInsets.all(8),
           color: Theme.of(context).colorScheme.background,
-          child: Column(
-            children: [
-              TextField(
-                decoration: const InputDecoration(
-                  hintText: "search for an anime e.g one piece",
-                  prefixIcon: Icon(Icons.search),
+          height: MediaQuery.of(context).size.height,
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                TextField(
+                  decoration: const InputDecoration(
+                    hintText: "search for an anime e.g one piece",
+                    prefixIcon: Icon(Icons.search),
+                  ),
+                  onSubmitted: (value) {
+                    setState(() {
+                      _searchResultsStream = _search(value);
+                    });
+                  },
                 ),
-                onSubmitted: (value) {
-                  setState(() {
-                    _searchResultsFuture = _search(value);
-                  });
-                },
-              ),
-              Expanded(
-                child: _buildResults(),
-              ),
-            ],
+                const SizedBox(height: 16),
+                StreamBuilder(
+                  stream: _searchResultsStream,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.none) {
+                      return Container();
+                    }
+
+                    final searchResults = snapshot.data;
+
+                    if (snapshot.connectionState != ConnectionState.active &&
+                        searchResults?.length != sources.length) {
+                      return const Center(
+                        child: CircularProgressIndicator(),
+                      );
+                    }
+
+                    if (searchResults == null) {
+                      return const Center(
+                        child: Text("Could not connect with MyAnimeList."),
+                      );
+                    }
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: searchResults.entries
+                          .map(
+                            (entry) {
+                              final source = entry.key;
+                              final results = entry.value;
+
+                              return [
+                                Text(
+                                  source,
+                                  style:
+                                      Theme.of(context).textTheme.titleMedium,
+                                ),
+                                Text(
+                                  "Found ${results.length} results",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color:
+                                        Theme.of(context).colorScheme.primary,
+                                  ),
+                                ),
+                                if (results.isNotEmpty) ...[
+                                  const SizedBox(height: 8),
+                                  SizedBox(
+                                    height: 200,
+                                    child: ListView.builder(
+                                      scrollDirection: Axis.horizontal,
+                                      itemCount: results.length,
+                                      itemBuilder: (context, idx) {
+                                        final anime = results[idx];
+                                        final extractor = sources.firstWhere(
+                                          (element) => element.name == source,
+                                        );
+
+                                        return GestureDetector(
+                                          onTap: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) =>
+                                                    DetailsScreenSources(
+                                                  anime: anime,
+                                                  animeId: null,
+                                                  showId:
+                                                      "$source-${anime.url}",
+                                                  imageUrl: anime.imageUrl,
+                                                  title: anime.title,
+                                                  extractor: extractor,
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                          child: Column(
+                                            children: [
+                                              CachedNetworkImage(
+                                                imageUrl: results[idx].imageUrl,
+                                                errorWidget:
+                                                    (context, url, error) =>
+                                                        Container(
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .surface,
+                                                ),
+                                                height: 100,
+                                                width: 100,
+                                              ),
+                                              const SizedBox(
+                                                width: 8,
+                                              ),
+                                              Text(results[idx].title),
+                                            ],
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ],
+                                const SizedBox(height: 8),
+                              ];
+                            },
+                          )
+                          .flattened
+                          .toList(),
+                    );
+                  },
+                )
+              ],
+            ),
           ),
         ),
       ),
     );
   }
-
-  @override
-  bool get wantKeepAlive => true;
 }

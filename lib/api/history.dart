@@ -8,6 +8,7 @@ import "package:luffy/util.dart";
 class HistoryEntry {
   const HistoryEntry({
     required this.id,
+    this.animeId,
     required this.title,
     required this.imageUrl,
     required this.progress,
@@ -15,20 +16,25 @@ class HistoryEntry {
     required this.sources,
     required this.subtitles,
     required this.sourceExpiration,
+    required this.showUrl,
   });
 
   HistoryEntry.fromJson(Map<String, dynamic> json)
       : id = json["id"],
+        animeId = json["anime_id"],
         title = json["title"],
         imageUrl = json["image_url"],
         progress = json["progress"],
         totalEpisodes = json["total_episodes"],
         sources = json["sources"],
         subtitles = json["subtitles"],
-        sourceExpiration = DateTime.parse(json["sources_last_updated"]);
+        sourceExpiration = DateTime.parse(json["sources_last_updated"]),
+        showUrl = json["show_url"];
 
   // The ID of the anime (if a normie show/movie will be formatted like so: "$sourceName-$showId")
   final String? id;
+  // The ID of the anime if its actually an anime found on MAL/Anilist
+  final int? animeId;
   //  The title of the anime/show/movie
   final String title;
   // The image URL of the anime/show/movie
@@ -43,10 +49,13 @@ class HistoryEntry {
   final Map<int, List<Subtitle>> subtitles;
   // Timestamp of when sources were last updated. (Used for caching)
   final DateTime sourceExpiration;
+  // The URL of the original show it belongs to (useful for looking up episodes again if needed)
+  final String showUrl;
 
   Map<String, dynamic> toJson() {
     return {
       "id": id,
+      "anime_id": animeId,
       "title": title,
       "image_url": imageUrl,
       "progress": progress.map((key, value) => MapEntry(key.toString(), value)),
@@ -64,6 +73,7 @@ class HistoryEntry {
         ),
       ),
       "source_expiration": sourceExpiration.toIso8601String(),
+      "show_url": showUrl,
     };
   }
 }
@@ -91,6 +101,7 @@ class HistoryService {
               .map(
                 (e) => HistoryEntry(
                   id: e["id"],
+                  animeId: e["anime_id"],
                   title: e["title"],
                   imageUrl: e["image_url"],
                   progress: e["progress"] != null
@@ -126,6 +137,7 @@ class HistoryService {
                         )
                       : {},
                   sourceExpiration: DateTime.parse(e["source_expiration"]),
+                  showUrl: e["show_url"],
                 ),
               )
               .toList()

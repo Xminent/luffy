@@ -1,7 +1,22 @@
-import "package:cached_network_image/cached_network_image.dart";
+import "package:carousel_slider/carousel_slider.dart";
+import "package:collection/collection.dart";
 import "package:flutter/material.dart";
-import "package:luffy/api/mal.dart";
+import "package:luffy/api/anilist.dart";
+import "package:luffy/components/anime_card.dart";
 import "package:luffy/screens/details.dart";
+import "package:luffy/screens/details/calen.dart";
+
+class _Data {
+  _Data({
+    required this.discover,
+    required this.recent,
+    required this.popular,
+  });
+
+  final List<SearchResult> discover;
+  final List<SearchResult> recent;
+  final List<SearchResult> popular;
+}
 
 class DiscoverScreen extends StatefulWidget {
   const DiscoverScreen({super.key});
@@ -12,12 +27,30 @@ class DiscoverScreen extends StatefulWidget {
 
 class _DiscoverScreenState extends State<DiscoverScreen>
     with AutomaticKeepAliveClientMixin {
-  late Future<List<TopAnimeResult>?> _topAnimesFuture;
+  late Future<_Data?> _animesFuture;
+  final ScrollController _scrollController = ScrollController();
+  bool _showScrollToTop = false;
+
+  Future<_Data?> _getData() async {
+    return _Data(
+      discover: await AnilistService.discover(),
+      recent: await AnilistService.recentlyUpdated(),
+      popular: await AnilistService.popular(),
+    );
+  }
 
   @override
   void initState() {
     super.initState();
-    _topAnimesFuture = MalService.getTopAnimes();
+
+    _animesFuture = _getData();
+
+    _scrollController.addListener(() {
+      final double showoffset = MediaQuery.of(context).size.height;
+      setState(() {
+        _showScrollToTop = _scrollController.offset > showoffset;
+      });
+    });
   }
 
   @override
@@ -29,8 +62,23 @@ class _DiscoverScreenState extends State<DiscoverScreen>
         appBar: AppBar(
           title: const Text("Discover"),
         ),
+        floatingActionButton: AnimatedOpacity(
+          duration: const Duration(milliseconds: 200),
+          opacity: _showScrollToTop ? 1.0 : 0.0,
+          curve: Curves.easeIn,
+          child: FloatingActionButton(
+            onPressed: () {
+              _scrollController.animateTo(
+                0,
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeIn,
+              );
+            },
+            child: const Icon(Icons.arrow_upward),
+          ),
+        ),
         body: FutureBuilder(
-          future: _topAnimesFuture,
+          future: _animesFuture,
           builder: (context, snapshot) {
             if (snapshot.connectionState != ConnectionState.done) {
               return const Center(
@@ -46,53 +94,218 @@ class _DiscoverScreenState extends State<DiscoverScreen>
               );
             }
 
-            return Container(
-              color: Theme.of(context).colorScheme.background,
-              child: ListView.builder(
-                itemCount: topAnimes.length,
-                itemBuilder: (context, index) {
-                  final anime = topAnimes[index];
-
-                  return Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      splashColor: Colors.grey,
-                      splashFactory: InkRipple.splashFactory,
-                      onTap: () {
+            return SingleChildScrollView(
+              controller: _scrollController,
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                color: Theme.of(context).colorScheme.background,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    CarouselSlider(
+                      options: CarouselOptions(
+                        height: 200.0,
+                        autoPlay: true,
+                        viewportFraction: 1,
+                      ),
+                      items: topAnimes.discover.map((anime) {
+                        return Builder(
+                          builder: (context) {
+                            return GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => DetailsScreen(
+                                      animeId: anime.id,
+                                      title: anime.titleUserPreferred,
+                                      imageUrl: anime.coverImage,
+                                      bannerImageUrl: anime.bannerImage,
+                                    ),
+                                  ),
+                                );
+                              },
+                              child: Row(
+                                children: [
+                                  Flexible(
+                                    child: AnimeCard(
+                                      anime: anime,
+                                    ),
+                                  ),
+                                  const SizedBox(
+                                    width: 8,
+                                  ),
+                                  Expanded(
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          anime.titleUserPreferred,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleMedium,
+                                        ),
+                                        const SizedBox(
+                                          height: 8,
+                                        ),
+                                        Text(
+                                          anime.status,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .primary,
+                                          ),
+                                        )
+                                      ],
+                                    ),
+                                  )
+                                ],
+                              ),
+                            );
+                          },
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 16),
+                    // Button which says Calendar and opens the CalendarScreen.
+                    ElevatedButton(
+                      onPressed: () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => DetailsScreen(
-                              animeId: anime.id.toString(),
-                              title: anime.title,
-                              imageUrl: anime.imageUrl,
-                              type: anime.type,
-                            ),
+                            builder: (context) => const CalendarScreen(),
                           ),
                         );
                       },
-                      child: ListTile(
-                        leading: CachedNetworkImage(
-                          imageUrl: anime.imageUrl,
-                          errorWidget: (context, url, error) => Container(
-                            color: Theme.of(context).colorScheme.surface,
-                          ),
-                          height: 100,
-                          width: 50,
-                          fit: BoxFit.cover,
-                        ),
-                        title: Text(anime.title),
-                        subtitle: Text(animeTypeToStr(anime.type)),
-                        trailing: Text(
-                          "${anime.score}",
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                        ),
+                      child: const Text("Calendar"),
+                    ),
+                    const SizedBox(height: 16),
+                    // Heading for "Recently Updated"
+                    const Text(
+                      "Recently Updated",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                      textAlign: TextAlign.left,
+                    ),
+                    // List of recently updated
+                    SizedBox(
+                      height: 220,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: topAnimes.recent.length,
+                        padding: const EdgeInsets.all(8),
+                        itemBuilder: (context, idx) {
+                          return SizedBox(
+                            width: 120,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                AnimeCard(
+                                  anime: topAnimes.recent[idx],
+                                  width: 120,
+                                  height: 150,
+                                ),
+                                const SizedBox(height: 8),
+                                Flexible(
+                                  child: Text(
+                                    topAnimes.recent[idx].titleUserPreferred,
+                                    style:
+                                        Theme.of(context).textTheme.titleSmall,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                )
+                              ],
+                            ),
+                          );
+                        },
+                        separatorBuilder: (context, idx) {
+                          return const SizedBox(width: 8);
+                        },
                       ),
                     ),
-                  );
-                },
+                    const SizedBox(height: 8),
+                    // Heading for "Recently Updated"
+                    const Text(
+                      "Popular Anime",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                      textAlign: TextAlign.left,
+                    ),
+                    const SizedBox(height: 16),
+                    // Show the rest of the popular anime within the column to listview required.
+                    ...topAnimes.popular.map((anime) {
+                      return [
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => DetailsScreen(
+                                  animeId: anime.id,
+                                  title: anime.titleUserPreferred,
+                                  imageUrl: anime.coverImage,
+                                  bannerImageUrl: anime.bannerImage,
+                                ),
+                              ),
+                            );
+                          },
+                          child: Row(
+                            children: [
+                              Flexible(
+                                child: AnimeCard(
+                                  anime: anime,
+                                  width: 120,
+                                  height: 150,
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      anime.titleUserPreferred,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      anime.status,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      anime.type,
+                                      style: const TextStyle(
+                                        fontStyle: FontStyle.italic,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16)
+                      ];
+                    }).flattened
+                  ],
+                ),
               ),
             );
           },

@@ -1,17 +1,25 @@
 import "dart:convert";
 
+import "package:cookie_jar/cookie_jar.dart";
 import "package:dio/dio.dart";
+import "package:dio_cookie_manager/dio_cookie_manager.dart";
 import "package:luffy/api/anime.dart";
 import "package:luffy/util.dart";
 
 const _baseUrl = "https://api.animeflix.live";
 
-final _dio = Dio(
-  BaseOptions(
-    connectTimeout: const Duration(seconds: 5),
-    receiveTimeout: const Duration(seconds: 5),
-  ),
-);
+final _dio = () {
+  final ret = Dio(
+    BaseOptions(
+      connectTimeout: const Duration(seconds: 5),
+      receiveTimeout: const Duration(seconds: 5),
+    ),
+  );
+
+  ret.interceptors.add(CookieManager(PersistCookieJar()));
+
+  return ret;
+}();
 
 const _headers = {
   "referer": "https://animeflix.live/",
@@ -210,7 +218,7 @@ class AnimeFlix {
           );
         }
       }
-    } on DioError catch (e) {
+    } on DioException catch (e) {
       prints("Failed to search anime AnimeFlix: $e");
     }
 

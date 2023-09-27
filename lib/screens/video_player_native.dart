@@ -1,5 +1,4 @@
 import "package:flutter/material.dart";
-import "package:flutter/scheduler.dart";
 import "package:flutter/services.dart";
 import "package:luffy/api/anime.dart";
 import "package:luffy/api/history.dart";
@@ -16,9 +15,11 @@ class VideoPlayerScreen extends StatefulWidget {
     required this.episodeNum,
     required this.sourceName,
     this.savedProgress,
-    required this.imageUrl,
+    this.imageUrl,
     required this.episodes,
     required this.sourceFetcher,
+    this.animeId,
+    required this.showUrl,
   });
 
   final String showId;
@@ -30,18 +31,17 @@ class VideoPlayerScreen extends StatefulWidget {
   final String? imageUrl;
   final List<Episode> episodes;
   final Future<List<VideoSource>> Function(Episode) sourceFetcher;
+  final int? animeId;
+  final String showUrl;
 
   @override
   State<VideoPlayerScreen> createState() => _VideoPlayerScreenState();
 }
 
-class _VideoPlayerScreenState extends State<VideoPlayerScreen>
-    with TickerProviderStateMixin {
+class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   VideoPlayerController? _controller;
   BoxFit _fit = BoxFit.contain;
   bool _isBuffering = true;
-  Ticker? _ticker;
-  final int _secondsOnScreen = 0;
   bool _hasResumed = false;
   VideoSource? _currentSource;
   List<VideoSource>? _sources;
@@ -118,20 +118,28 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
   }
 
   void _onSourceChanged(VideoSource source) {
-    final oldPosition = _controller?.value.position;
+    final oldController = _controller;
+    final oldPosition = oldController?.value.position;
 
     if (oldPosition == null) {
       return;
     }
 
-    prints("VideoPlayer source changed to ${source.description}");
-    _controller = VideoPlayerController.networkUrl(
-      Uri.parse(source.videoUrl),
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await oldController?.dispose();
 
-    setState(() {
-      _positionBeforeSourceChange = oldPosition;
-      _hasResumedFromSourceChange = false;
+      prints("VideoPlayer source changed to ${source.description}");
+
+      _controller = VideoPlayerController.networkUrl(
+        Uri.parse(source.videoUrl),
+      )..initialize().then((_) {
+          setState(() {
+            _positionBeforeSourceChange = oldPosition;
+            _hasResumedFromSourceChange = false;
+          });
+
+          _controller?.play();
+        });
     });
   }
 
@@ -162,8 +170,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
       _hasResumedFromSourceChange = false;
       _isBuffering = true;
     });
-
-    _controller?.dispose();
 
     // Really long network request.
     widget
@@ -206,9 +212,18 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
         _isRequestInProgress = false;
       });
 
-      _controller = VideoPlayerController.networkUrl(
-        Uri.parse(sources.first.videoUrl),
-      );
+      final oldController = _controller;
+
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        await oldController?.dispose();
+
+        _controller = VideoPlayerController.networkUrl(
+          Uri.parse(sources.first.videoUrl),
+        )..initialize().then((_) {
+            setState(() {});
+            _controller?.play();
+          });
+      });
     });
   }
 
@@ -223,13 +238,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
             controller.value.duration.inMilliseconds)
         .clamp(0.0, 1.0);
 
-    // We will only update if you have watched at least 5% of the video.
-    // final minSecondsOnScreen = 0.05 * _duration.inSeconds;
-    const minSecondsOnScreen = 0;
-
-    if (!progress.isFinite ||
-        progress == 0 ||
-        _secondsOnScreen <= minSecondsOnScreen) {
+    if (!progress.isFinite || progress == 0) {
       return;
     }
 
@@ -240,6 +249,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     HistoryService.addProgress(
       HistoryEntry(
         id: widget.showId,
+        animeId: widget.animeId,
         title: widget.showTitle,
         imageUrl: currentEpisode.thumbnailUrl ?? "",
         progress: {},
@@ -251,6 +261,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
           widget.episodeNum: _subtitles?.whereType<Subtitle>().toList() ?? [],
         },
         sourceExpiration: DateTime.now().add(const Duration(hours: 1)),
+        showUrl: widget.showUrl,
       ),
       _currentEpisodeNum,
       progress,
@@ -281,8 +292,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
             history.sources.containsKey(widget.episodeNum) &&
             history.sources[widget.episodeNum]!.isNotEmpty &&
             history.sourceExpiration.isAfter(DateTime.now())) {
-          // TODO: Remove debug (remove history).
-          await HistoryService.removeMedia(history);
           prints(
             "Using cached sources for ${widget.showTitle} episode ${widget.episodeNum}",
           );
@@ -328,28 +337,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
         _subtitles = sources.map((source) => source.subtitle).toList();
       });
 
-      // _player.stream.playing.listen((event) {
-      //   if (!mounted) {
-      //     return;
-      //   }
-
-      //   setState(() {
-      //     // Start counting the user's time on screen.
-
-      //     if (_ticker == null) {
-      //       _ticker = createTicker((elapsed) {
-      //         setState(() {
-      //           _secondsOnScreen = elapsed.inSeconds;
-      //         });
-      //       });
-
-      //       _ticker?.start();
-      //     }
-
-      //     _isPlaying = event;
-      //   });
-      // });
-
       prints("VideoPlayer source changed to ${sources.first.videoUrl}");
 
       _controller = VideoPlayerController.networkUrl(
@@ -363,6 +350,18 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
 
         if (!mounted || controller == null) {
           return;
+        }
+
+        if (controller.value.hasError) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                controller.value.errorDescription ?? "Unknown error",
+              ),
+            ),
+          );
+
+          Navigator.pop(context);
         }
 
         setState(() {
@@ -418,8 +417,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
 
     return WillPopScope(
       onWillPop: () async {
-        prints("VideoPlayerScreen: onWillPop");
-
         final controller = _controller;
 
         if (controller == null) {
@@ -498,7 +495,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
   void dispose() {
     _syncProgress();
     _controller?.dispose();
-    _ticker?.dispose();
 
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 

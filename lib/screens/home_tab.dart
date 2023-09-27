@@ -34,10 +34,12 @@ class _HomeTabScreenState extends State<HomeTabScreen>
   @override
   void initState() {
     super.initState();
+
     _tabController = TabController(
       length: _tabs.length, // number of tabs
       vsync: this,
     );
+
     _tabController.addListener(_handleTabChange);
   }
 
@@ -94,25 +96,3 @@ class _HomeTabScreenState extends State<HomeTabScreen>
     );
   }
 }
-
-      // body: Center(
-      //   child: Column(
-      //     mainAxisAlignment: MainAxisAlignment.center,
-      //     children: [
-      //       const Text(
-      //         'I have a huge penis!',
-      //         style: TextStyle(fontSize: 24),
-      //       ),
-      //       const SizedBox(height: 20),
-      //       ElevatedButton(
-      //         onPressed: () => Navigator.pushNamed(context, '/details'),
-      //         child: const Text('About'),
-      //       ),
-      //       const SizedBox(height: 20),
-      //       ElevatedButton(
-      //         onPressed: () => Navigator.pushNamed(context, '/login'),
-      //         child: const Text('Login'),
-      //       ),
-      //     ],
-      //   ),
-      // ),

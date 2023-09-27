@@ -1,3 +1,4 @@
+import "dart:async";
 import "dart:convert";
 import "dart:math";
 
@@ -9,6 +10,18 @@ dynamic tryJsonDecode(String s) {
   } catch (e) {
     return null;
   }
+}
+
+Future<String> readResponse(HttpClientResponse response) {
+  final completer = Completer<String>();
+  final contents = StringBuffer();
+  response.transform(utf8.decoder).listen(
+    (data) {
+      contents.write(data);
+    },
+    onDone: () => completer.complete(contents.toString()),
+  );
+  return completer.future;
 }
 
 void prints(s1) {

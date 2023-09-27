@@ -20,6 +20,7 @@ class VideoPlayerScreen extends StatefulWidget {
     required this.imageUrl,
     required this.episodes,
     required this.sourceFetcher,
+    required this.showUrl,
   });
 
   final String showId;
@@ -31,6 +32,7 @@ class VideoPlayerScreen extends StatefulWidget {
   final String? imageUrl;
   final List<Episode> episodes;
   final Future<List<VideoSource>> Function(Episode) sourceFetcher;
+  final String showUrl;
 
   @override
   State<VideoPlayerScreen> createState() => _VideoPlayerScreenState();
@@ -232,6 +234,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
           widget.episodeNum: _subtitles?.whereType<Subtitle>().toList() ?? [],
         },
         sourceExpiration: DateTime.now().add(const Duration(hours: 1)),
+        showUrl: widget.showUrl,
       ),
       _currentEpisodeNum,
       progress,
@@ -262,8 +265,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
             history.sources.containsKey(widget.episodeNum) &&
             history.sources[widget.episodeNum]!.isNotEmpty &&
             history.sourceExpiration.isAfter(DateTime.now())) {
-          // TODO: Remove debug (remove history).
-          await HistoryService.removeMedia(history);
           prints(
             "Using cached sources for ${widget.showTitle} episode ${widget.episodeNum}",
           );

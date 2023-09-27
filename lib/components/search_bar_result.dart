@@ -1,6 +1,6 @@
 import "package:cached_network_image/cached_network_image.dart";
 import "package:flutter/material.dart";
-import "package:luffy/api/mal.dart";
+import "package:luffy/api/anilist.dart";
 import "package:luffy/screens/details.dart";
 
 class SearchResultComponent extends StatelessWidget {
@@ -25,9 +25,12 @@ class SearchResultComponent extends StatelessWidget {
             context,
             MaterialPageRoute(
               builder: (context) => DetailsScreen(
-                animeId: anime.id.toString(),
-                imageUrl: anime.imageUrl,
-                title: anime.title,
+                // TODO: DetailsScreen should be notified when the ID is not from MAL.
+                animeId: anime.id,
+                malId: anime.malId,
+                imageUrl: anime.coverImage,
+                bannerImageUrl: anime.bannerImage,
+                title: anime.titleUserPreferred,
               ),
             ),
           );
@@ -37,7 +40,7 @@ class SearchResultComponent extends StatelessWidget {
           child: Row(
             children: [
               CachedNetworkImage(
-                imageUrl: anime.imageUrl,
+                imageUrl: anime.coverImage,
                 errorWidget: (context, url, error) => Container(
                   color: Theme.of(context).colorScheme.surface,
                 ),
@@ -52,20 +55,20 @@ class SearchResultComponent extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      anime.title,
+                      anime.titleUserPreferred,
                       style: Theme.of(context)
                           .textTheme
                           .titleLarge!
                           .copyWith(fontWeight: FontWeight.bold),
                     ),
-                    const SizedBox(
-                      height: 8,
-                    ),
-                    Text(
-                      anime.synopsis,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                    // const SizedBox(
+                    //   height: 8,
+                    // ),
+                    // Text(
+                    //   anime.synopsis,
+                    //   maxLines: 3,
+                    //   overflow: TextOverflow.ellipsis,
+                    // ),
                   ],
                 ),
               ),

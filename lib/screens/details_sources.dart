@@ -6,9 +6,9 @@ import "package:flutter/material.dart";
 import "package:intl/intl.dart";
 import "package:luffy/api/anime.dart";
 import "package:luffy/api/history.dart";
-import "package:luffy/api/mal.dart";
+import "package:luffy/api/mal.dart" as mal;
 import "package:luffy/components/episode_list.dart";
-import "package:luffy/screens/video_player.dart";
+import "package:luffy/screens/video_player_native.dart";
 import "package:luffy/util.dart";
 import "package:skeletons/skeletons.dart";
 import "package:tuple/tuple.dart";
@@ -17,6 +17,7 @@ class DetailsScreenSources extends StatefulWidget {
   const DetailsScreenSources({
     super.key,
     required this.anime,
+    required this.showId,
     required this.animeId,
     required this.title,
     required this.imageUrl,
@@ -35,23 +36,24 @@ class DetailsScreenSources extends StatefulWidget {
   });
 
   final Anime anime;
-  final String animeId;
+  final String showId;
+  final int? animeId;
   final String title;
   final String? imageUrl;
   final DateTime? startDate;
   final DateTime? endDate;
-  final AnimeListStatus? status;
+  final mal.AnimeListStatus? status;
   final int? score;
   final int? watchedEpisodes;
   final int? totalEpisodes;
   final String? coverImageUrl;
   final String? titleEnJp;
   final String? titleJaJp;
-  final AnimeType? type;
+  final mal.AnimeType? type;
   final void Function(
     int score,
     int watchedEpisodes,
-    AnimeListStatus status,
+    mal.AnimeListStatus status,
   )? onUpdate;
   final AnimeExtractor extractor;
 
@@ -68,7 +70,7 @@ class _AnimeAndEpisodes {
     required this.totalEpisodes,
   });
 
-  final MalAnime? anime;
+  final mal.MalAnime? anime;
   final List<Episode> episodes;
   List<double?> episodeProgress;
   final int? watchedEpisodes;
@@ -78,7 +80,6 @@ class _AnimeAndEpisodes {
 class _DetailsScreenSourcesState extends State<DetailsScreenSources>
     with AutomaticKeepAliveClientMixin {
   late Future<_AnimeAndEpisodes?> _animeInfoFuture;
-
   late final int? _watchedEpisodes = widget.watchedEpisodes;
 
   Future<void> _handleEpisodeSelected(
@@ -92,11 +93,10 @@ class _DetailsScreenSourcesState extends State<DetailsScreenSources>
 
     final episodeProgress = animeInfo.episodeProgress[idx];
 
-    // ignore: use_build_context_synchronously
     final progress = await Navigator.of(context).push<double>(
       MaterialPageRoute(
         builder: (_) => VideoPlayerScreen(
-          showId: widget.animeId,
+          showId: widget.showId,
           showTitle: widget.title,
           episode: episode,
           episodeNum: idx + 1,
@@ -104,7 +104,8 @@ class _DetailsScreenSourcesState extends State<DetailsScreenSources>
           savedProgress: episodeProgress,
           imageUrl: widget.imageUrl ?? animeInfo.anime?.imageUrl,
           episodes: animeInfo.episodes,
-          sourceFetcher: (Episode e) => widget.extractor.getSources(e),
+          sourceFetcher: (ep) => widget.extractor.getSources(ep),
+          showUrl: widget.anime.url,
         ),
       ),
     );
@@ -118,7 +119,7 @@ class _DetailsScreenSourcesState extends State<DetailsScreenSources>
 
   Future<_AnimeAndEpisodes?> _getAnimeInfo() async {
     final episodes = await widget.extractor.getEpisodes(widget.anime);
-    final history = await HistoryService.getMedia(widget.animeId);
+    final history = await HistoryService.getMedia(widget.showId);
 
     final episodeProgress = episodes.asMap().entries.map((e) {
       final idx = e.key;
@@ -131,9 +132,11 @@ class _DetailsScreenSourcesState extends State<DetailsScreenSources>
       return value;
     }).toList();
 
-    final anime = int.tryParse(widget.animeId) != null
-        ? await MalService.getAnimeInfo(int.parse(widget.animeId))
+    final anime = widget.animeId != null
+        ? await mal.MalService.getAnimeInfo(widget.animeId!)
         : null;
+
+    prints("anime: $anime");
 
     return _AnimeAndEpisodes(
       anime: anime,
@@ -373,7 +376,9 @@ class _DetailsScreenSourcesState extends State<DetailsScreenSources>
               ..._buildResumeButton(animeInfo),
               EpisodeList(
                 episodes: animeInfo?.episodes ?? [],
-                episodeProgress: animeInfo?.episodeProgress ?? [],
+                episodeInfo: const [],
+                episodeInfoKitsu: const [],
+                episodeProgress: const {},
                 watchedEpisodes: animeInfo?.watchedEpisodes ?? 0,
                 totalEpisodes:
                     animeInfo?.totalEpisodes ?? widget.totalEpisodes ?? 0,
@@ -381,41 +386,6 @@ class _DetailsScreenSourcesState extends State<DetailsScreenSources>
                   _handleEpisodeSelected(episode, idx, animeInfo);
                 },
               ),
-
-              // ...List.generate(
-              //   widget.totalEpisodes,
-              //   (index) => Column(children: [
-              //     const SizedBox(height: 5),
-              //     Container(
-              //       decoration: BoxDecoration(
-              //         color: widget.totalEpisodes - index <=
-              //                 widget.watchedEpisodes
-              //             ? Theme.of(context)
-              //                 .colorScheme
-              //                 .primary
-              //                 .withOpacity(0.5)
-              //             : Theme.of(context).colorScheme.surface,
-              //         borderRadius: BorderRadius.circular(10),
-              //       ),
-              //       child: Padding(
-              //           padding: const EdgeInsets.all(8.0),
-              //           child: Row(
-              //             mainAxisAlignment:
-              //                 MainAxisAlignment.spaceBetween,
-              //             children: [
-              //               Text(
-              //                 "Episode ${widget.totalEpisodes - index}",
-              //                 style: textColorStyle.copyWith(
-              //                   fontSize: 16,
-              //                 ),
-              //               ),
-              //               const Icon(Icons.check),
-              //             ],
-              //           )),
-              //     ),
-              //     const SizedBox(height: 5)
-              //   ]),
-              // ),
             ],
           ],
         ),
@@ -423,7 +393,7 @@ class _DetailsScreenSourcesState extends State<DetailsScreenSources>
     );
   }
 
-  Widget _buildGenres(MalAnime? animeInfo) {
+  Widget _buildGenres(mal.MalAnime? animeInfo) {
     final textColorStyle = TextStyle(
       color: Theme.of(context).colorScheme.onBackground,
     );
@@ -637,18 +607,13 @@ class _DetailsScreenSourcesState extends State<DetailsScreenSources>
       child: FutureBuilder(
         future: _animeInfoFuture,
         builder: (context, snapshot) {
-          prints("Rebuilding anime info page");
-
-          final animeInfo = snapshot.data;
-          final coverImageUrl = widget.coverImageUrl;
-
           return Scaffold(
             appBar: AppBar(
               title: Text(widget.title),
             ),
             body: _buildBody(
-              animeInfo: animeInfo,
-              coverImageUrl: coverImageUrl,
+              animeInfo: snapshot.data,
+              coverImageUrl: widget.coverImageUrl,
               isLoading: snapshot.connectionState != ConnectionState.done,
             ),
           );

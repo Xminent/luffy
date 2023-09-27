@@ -8,6 +8,16 @@ import "package:luffy/components/anime_info.dart";
 import "package:luffy/screens/details.dart";
 import "package:luffy/screens/details_sources.dart";
 
+class _Data {
+  _Data({
+    required this.animeList,
+    required this.userInfo,
+  });
+
+  final AnimeList animeList;
+  final UserInfo? userInfo;
+}
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -17,12 +27,11 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen>
     with AutomaticKeepAliveClientMixin {
-  late Future<AnimeList?> _animeListFuture;
-  UserInfo? _userInfo;
+  late Future<_Data?> _dataFuture;
 
   void _onHistoryUpdate(List<HistoryEntry> e) {
     setState(() {
-      _animeListFuture = _getAnimeList();
+      _dataFuture = _getData();
     });
   }
 
@@ -42,27 +51,7 @@ class _HomeScreenState extends State<HomeScreen>
     },
   );
 
-  Future<AnimeList> _getAnimeList() async {
-    // return Future.value(AnimeList(
-    //   completed: [],
-    //   watching: List.generate(
-    //       100,
-    //       (index) => AnimeListEntry(
-    //           id: 1,
-    //           title: "title $index",
-    //           imageUrl: "https://via.placeholder.com/150",
-    //           status: AnimeListStatus.completed,
-    //           score: 1,
-    //           watchedEpisodes: 1,
-    //           totalEpisodes: 2,
-    //           isRewatching: false,
-    //           startDate: null,
-    //           endDate: null)),
-    //   dropped: [],
-    //   onHold: [],
-    //   planToWatch: [],
-    // ));
-
+  Future<_Data?> _getData() async {
     final animeList = await MalService.getAnimeList();
     final history = await HistoryService.getHistory();
     final animeListWatchingIdIdxMap = <int, int>{};
@@ -73,32 +62,16 @@ class _HomeScreenState extends State<HomeScreen>
       animeListWatchingIdIdxMap[anime.id] = i;
     }
 
-    // Add the history to the anime list's watching list. If an entry's ID is already in the list, move it to the top.
     for (final historyEntry in history) {
-      final id = historyEntry.id;
-      final isAnime = id != null &&
-          int.tryParse(id) != null &&
-          animeListWatchingIdIdxMap.containsKey(int.parse(id));
-
-      if (isAnime) {
-        final anime =
-            animeList.watching[animeListWatchingIdIdxMap[int.parse(id)]!];
-        final index = animeList.watching.indexOf(anime);
-
-        animeList.watching.removeAt(index);
-        animeList.watching.insert(0, anime);
-        continue;
-      }
-
       final latestEpisode = historyEntry.progress.keys.fold(
         0,
-        (int prev, int curr) => curr > prev ? curr : prev,
+        (prev, curr) => curr > prev ? curr : prev,
       );
 
       animeList.watching.insert(
         0,
         AnimeListEntry(
-          id: -1,
+          id: historyEntry.animeId ?? -1,
           title: historyEntry.title,
           imageUrl: historyEntry.imageUrl,
           status: AnimeListStatus.watching,
@@ -116,22 +89,25 @@ class _HomeScreenState extends State<HomeScreen>
           titleEnJp: "",
           titleJaJp: "",
           type: AnimeType.tv,
+          extraData: historyEntry.showUrl,
         ),
       );
     }
 
-    return animeList;
+    return _Data(
+      animeList: animeList,
+      userInfo: await MalService.getUserInfo(),
+    );
   }
 
   @override
   void initState() {
     super.initState();
 
-    _animeListFuture = Future.microtask(() async {
+    _dataFuture = () async {
       await HistoryService.registerListener(_onHistoryUpdate);
-      _userInfo = await MalService.getUserInfo();
-      return _getAnimeList();
-    });
+      return _getData();
+    }();
   }
 
   @override
@@ -139,7 +115,7 @@ class _HomeScreenState extends State<HomeScreen>
     super.build(context);
 
     return FutureBuilder(
-      future: _animeListFuture,
+      future: _dataFuture,
       builder: (context, snapshot) {
         switch (snapshot.connectionState) {
           case ConnectionState.none:
@@ -154,13 +130,16 @@ class _HomeScreenState extends State<HomeScreen>
             break;
         }
 
-        if (snapshot.data == null) {
+        final data = snapshot.data;
+
+        if (data == null) {
           return const Center(
             child: Text("No data"),
           );
         }
 
-        final animeList = snapshot.data!;
+        final animeList = data.animeList;
+        final userInfo = data.userInfo;
 
         return SafeArea(
           child: DefaultTabController(
@@ -170,7 +149,7 @@ class _HomeScreenState extends State<HomeScreen>
                 title: Row(
                   children: [
                     CachedNetworkImage(
-                      imageUrl: _userInfo?.picture ??
+                      imageUrl: userInfo?.picture ??
                           "https://via.placeholder.com/150",
                       width: 40,
                       height: 40,
@@ -181,9 +160,9 @@ class _HomeScreenState extends State<HomeScreen>
                     const SizedBox(
                       width: 8,
                     ),
-                    if (_userInfo != null)
+                    if (userInfo != null)
                       Text(
-                        " (${_userInfo!.name})",
+                        " (${userInfo.name})",
                         style: Theme.of(context).textTheme.titleSmall,
                       ),
                     const Spacer(),
@@ -244,13 +223,14 @@ class _HomeScreenState extends State<HomeScreen>
                         color: Theme.of(context).colorScheme.background,
                         child: CustomRefreshIndicator(
                           builder: MaterialIndicatorDelegate(
+                            displacement: 20,
                             builder: (context, controller) {
                               final offset = controller.value * 0.5 * 3.1415;
 
                               return Transform.rotate(
                                 angle: offset,
                                 child: Icon(
-                                  Icons.ac_unit,
+                                  Icons.refresh,
                                   color: Theme.of(context).colorScheme.primary,
                                   size: 30,
                                 ),
@@ -261,23 +241,25 @@ class _HomeScreenState extends State<HomeScreen>
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text("Refreshing..."),
-                                duration: Duration(seconds: 1),
+                                duration: Duration(milliseconds: 250),
                               ),
                             );
 
-                            // Wait for 2 seconds to simulate refreshing.
-                            return Future.delayed(const Duration(seconds: 2),
-                                () {
-                              setState(() {
-                                _animeListFuture = _getAnimeList();
-                              });
+                            setState(() {
+                              _dataFuture = () async {
+                                final ret = await _getData();
 
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text("Refreshed!"),
-                                  duration: Duration(seconds: 1),
-                                ),
-                              );
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text("Refreshed!"),
+                                      duration: Duration(milliseconds: 250),
+                                    ),
+                                  );
+                                }
+
+                                return ret;
+                              }();
                             });
                           },
                           child: ListView.builder(
@@ -291,10 +273,12 @@ class _HomeScreenState extends State<HomeScreen>
                                 child: GestureDetector(
                                   onTap: () => Navigator.push(
                                     context,
-                                    anime.id != -1
+                                    anime.id != -1 && anime.extraData.isEmpty
                                         ? MaterialPageRoute(
                                             builder: (context) => DetailsScreen(
-                                              animeId: anime.id.toString(),
+                                              animeId: anime.id,
+                                              malId: anime.id,
+                                              isMalId: true,
                                               title: anime.title,
                                               imageUrl: anime.imageUrl,
                                               startDate: anime.startDate,
@@ -305,7 +289,7 @@ class _HomeScreenState extends State<HomeScreen>
                                                   anime.watchedEpisodes,
                                               totalEpisodes:
                                                   anime.totalEpisodes ?? 0,
-                                              coverImageUrl:
+                                              bannerImageUrl:
                                                   anime.coverImageUrl,
                                               titleEnJp: anime.titleEnJp,
                                               titleJaJp: anime.titleJaJp,
@@ -385,9 +369,10 @@ class _HomeScreenState extends State<HomeScreen>
                                               anime: Anime(
                                                 title: anime.title,
                                                 imageUrl: anime.imageUrl,
-                                                url: anime.id.toString(),
+                                                url: anime.extraData,
                                               ),
-                                              animeId: anime.coverImageUrl!,
+                                              animeId: anime.id,
+                                              showId: anime.coverImageUrl!,
                                               title: anime.title,
                                               imageUrl: anime.imageUrl,
                                               extractor: _extractorsMap[anime

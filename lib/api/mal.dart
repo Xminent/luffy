@@ -294,6 +294,44 @@ class SearchResult {
   final double? score;
 }
 
+class Episode {
+  Episode({
+    required this.id,
+    required this.url,
+    required this.title,
+    required this.titleJapanese,
+    required this.titleRomaji,
+    required this.aired,
+    required this.score,
+    required this.filler,
+    required this.recap,
+    required this.forumUrl,
+  });
+
+  Episode.fromJson(Map<String, dynamic> json)
+      : id = json["mal_id"],
+        url = json["url"],
+        title = json["title"],
+        titleJapanese = json["title_japanese"],
+        titleRomaji = json["title_romanji"],
+        aired = json["aired"] != null ? DateTime.parse(json["aired"]) : null,
+        score = json["score"]?.toDouble(),
+        filler = json["filler"],
+        recap = json["recap"],
+        forumUrl = json["forum_url"];
+
+  final int id;
+  final String? url;
+  final String title;
+  final String? titleJapanese;
+  final String? titleRomaji;
+  final DateTime? aired;
+  final double? score;
+  final bool filler;
+  final bool recap;
+  final String? forumUrl;
+}
+
 class UserInfo {
   UserInfo({
     required this.id,
@@ -445,7 +483,7 @@ class MalService {
     try {
       final characters = await getAnimeCharacters(id);
 
-      prints("Got anime characters");
+      prints("Got anime characters: ${jsonEncode(characters)}");
 
       final res =
           await http.get(Uri.parse("https://api.jikan.moe/v4/anime/$id/full"));
@@ -945,6 +983,26 @@ class MalService {
       return null;
     }
   }
+
+  static Future<List<Episode>> getAnimeEpisodes(int animeId) async {
+    try {
+      final res = await http.get(
+        Uri.parse("https://api.jikan.moe/v4/anime/$animeId/episodes?page=1"),
+      );
+
+      final data = jsonDecode(res.body);
+      final ret = <Episode>[];
+
+      for (final e in data["data"]) {
+        ret.add(Episode.fromJson(e));
+      }
+
+      return ret;
+    } catch (e) {
+      prints("Failed to get anime episodes: $e");
+      return [];
+    }
+  }
 }
 
 Future<AnimeList> _convertJsonToAnimeList(Map<String, dynamic> json) async {
@@ -1277,6 +1335,7 @@ class AnimeListEntry {
     required this.titleEnJp,
     required this.titleJaJp,
     required this.type,
+    this.extraData = "",
   });
 
   AnimeListEntry.fromJson(Map<String, dynamic> json)
@@ -1297,7 +1356,8 @@ class AnimeListEntry {
         coverImageUrl = json["coverImageUrl"],
         titleEnJp = json["titleEnJp"],
         titleJaJp = json["titleJaJp"],
-        type = json["type"] != null ? AnimeType.values[json["type"]] : null;
+        type = json["type"] != null ? AnimeType.values[json["type"]] : null,
+        extraData = "";
 
   int id;
   String title;
@@ -1314,6 +1374,7 @@ class AnimeListEntry {
   String? titleEnJp; // the title in english japanese
   String? titleJaJp; // the title in actual japanese
   AnimeType? type;
+  String extraData;
 
   Map<String, dynamic> toJson() {
     return {

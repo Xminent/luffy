@@ -3,30 +3,36 @@ import "dart:math";
 import "package:cached_network_image/cached_network_image.dart";
 import "package:flutter/material.dart";
 import "package:luffy/api/anime.dart";
+import "package:luffy/api/kitsu.dart" as kitsu;
+import "package:luffy/api/mal.dart" as mal;
 
 class EpisodeList extends StatefulWidget {
   const EpisodeList({
     super.key,
     required this.episodes,
     required this.episodeProgress,
+    required this.episodeInfo,
+    required this.episodeInfoKitsu,
     required this.watchedEpisodes,
     required this.totalEpisodes,
     required this.onEpisodeSelected,
   });
 
   final List<Episode> episodes;
-  final List<double?> episodeProgress;
+  final Map<int, double> episodeProgress;
+  final List<mal.Episode> episodeInfo;
+  final List<kitsu.Episode> episodeInfoKitsu;
   final int watchedEpisodes;
   final int totalEpisodes;
-  final void Function(Episode episode, int idx) onEpisodeSelected;
+  final void Function(Episode, int) onEpisodeSelected;
 
   @override
   State<EpisodeList> createState() => _EpisodeListState();
 }
 
 class _EpisodeListState extends State<EpisodeList> {
-  int _startIndex = 0;
-  late int _endIndex = min(20, widget.episodes.length);
+  late int _startIndex = (widget.watchedEpisodes + 1) ~/ 20 * 20;
+  late int _endIndex = min(_startIndex + 20, widget.episodes.length);
   late final _showDropdown = widget.episodes.length > 20;
 
   late final _episodesChunks = (() {
@@ -72,7 +78,8 @@ class _EpisodeListState extends State<EpisodeList> {
   }
 
   Widget _buildThumbnail(Episode episode, int idx) {
-    final thumbnail = episode.thumbnailUrl;
+    final thumbnail = widget.episodeInfoKitsu.elementAtOrNull(idx)?.image ??
+        episode.thumbnailUrl;
     final horizontal = <Widget>[];
     final textHorizontal = <Widget>[];
 
@@ -107,7 +114,10 @@ class _EpisodeListState extends State<EpisodeList> {
       ]);
     }
 
-    final title = episode.title;
+    final altTitle = widget.episodeInfo.elementAtOrNull(idx)?.title ??
+        widget.episodeInfoKitsu.elementAtOrNull(idx)?.title;
+
+    final title = altTitle ?? episode.title;
     final titleText =
         title != null ? "${idx + 1}: $title" : "Episode ${idx + 1}";
     final rating = episode.rating;

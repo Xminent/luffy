@@ -1,5 +1,5 @@
 import "package:flutter/material.dart";
-import "package:luffy/api/mal.dart";
+import "package:luffy/api/anilist.dart";
 import "package:luffy/components/search_bar_result.dart";
 
 class SearchScreen extends StatefulWidget {
@@ -41,18 +41,16 @@ class _SearchScreenState extends State<SearchScreen>
             itemCount: searchResults.length,
             itemBuilder: (context, index) {
               final anime = searchResults[index];
-              final score = anime.score;
+              final score = anime.meanScore;
               final type = anime.type;
               final toShow = <Widget>[];
 
-              if (score != null) {
-                toShow.add(
-                  Text(
-                    "Score: $score",
-                    style: Theme.of(context).textTheme.labelSmall,
-                  ),
-                );
-              }
+              toShow.add(
+                Text(
+                  "Score: $score",
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
+              );
 
               if (type.isNotEmpty) {
                 if (toShow.isNotEmpty) {
@@ -73,7 +71,7 @@ class _SearchScreenState extends State<SearchScreen>
 
               return SearchResultComponent(
                 anime: anime,
-                score: score,
+                score: score?.toDouble(),
               );
             },
           ),
@@ -103,7 +101,7 @@ class _SearchScreenState extends State<SearchScreen>
                 ),
                 onSubmitted: (value) {
                   setState(() {
-                    _searchResultsFuture = MalService.search(value);
+                    _searchResultsFuture = AnilistService.search(value);
                   });
                 },
               ),
