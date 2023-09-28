@@ -31,7 +31,7 @@ class _SearchScreenState extends State<SearchScreen>
 
         if (searchResults == null) {
           return const Center(
-            child: Text("Could not connect with MyAnimeList."),
+            child: Text("No results found"),
           );
         }
 

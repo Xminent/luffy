@@ -7,13 +7,16 @@ import "package:flutter_inappwebview/flutter_inappwebview.dart";
 import "package:luffy/auth.dart";
 import "package:luffy/screens/home_tab.dart";
 import "package:luffy/screens/login.dart";
+import "package:luffy/scroll_behavior.dart";
 import "package:luffy/theme.dart";
+import "package:media_kit/media_kit.dart";
 import "package:window_manager/window_manager.dart";
 
 Future main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  MediaKit.ensureInitialized();
 
-  if (defaultTargetPlatform == TargetPlatform.windows) {
+  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows) {
     await windowManager.ensureInitialized();
   }
 
@@ -52,6 +55,8 @@ class _MyAppState extends State<MyApp> {
       theme: _lightTheme,
       darkTheme: _darkTheme,
       home: home,
+      debugShowCheckedModeBanner: false,
+      scrollBehavior: MyCustomScrollBehavior(),
       routes: {
         "/home": (context) => const HomeTabScreen(),
         "/login": (context) => const LoginScreen(),

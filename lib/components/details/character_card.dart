@@ -31,20 +31,24 @@ class CharacterCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          SizedBox(
-            width: 150,
-            child: Text(
-              character.name,
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+          Flexible(
+            child: SizedBox(
+              width: 150,
+              child: Text(
+                character.name,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ),
-          Text(
-            character.role,
-            style: TextStyle(
-              fontStyle: FontStyle.italic,
-              color: Theme.of(context).colorScheme.primary,
+          Flexible(
+            child: Text(
+              character.role,
+              style: TextStyle(
+                fontStyle: FontStyle.italic,
+                color: Theme.of(context).colorScheme.primary,
+              ),
             ),
           )
         ],

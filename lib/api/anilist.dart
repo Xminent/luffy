@@ -82,6 +82,7 @@ class AnimeInfo {
         ),
         recommendations = List<SearchResult>.from(
           json["recommendations"]["nodes"]
+              .where((node) => node["mediaRecommendation"] != null)
               .map((x) => SearchResult.fromJson(x["mediaRecommendation"])),
         );
 
@@ -346,19 +347,14 @@ class AnilistService {
           "{Media(${isMalId ? "idMal" : "id"}:$id){id mediaListEntry{id status score(format:POINT_100) progress private notes repeat customLists updatedAt startedAt{year month day}completedAt{year month day}}isFavourite siteUrl idMal nextAiringEpisode{episode airingAt}source countryOfOrigin format duration season seasonYear startDate{year month day}endDate{year month day}genres studios(isMain:true){nodes{id name siteUrl}}description trailer { site id } synonyms tags { name rank isMediaSpoiler } characters(sort:[ROLE,FAVOURITES_DESC],perPage:25,page:1){edges{role node{id image{medium}name{userPreferred}}}}relations{edges{relationType(version:2)node{id idMal mediaListEntry{progress private score(format:POINT_100) status} episodes chapters nextAiringEpisode{episode} popularity meanScore isAdult isFavourite format title{english romaji userPreferred}type status(version:2)bannerImage coverImage{large}}}}staffPreview: staff(perPage: 8, sort: [RELEVANCE, ID]) {edges{role node{id name{userPreferred}}}}recommendations(sort:RATING_DESC){nodes{mediaRecommendation{id idMal mediaListEntry{progress private score(format:POINT_100) status} episodes chapters nextAiringEpisode{episode}meanScore isAdult isFavourite format title{english romaji userPreferred}type status(version:2)bannerImage coverImage{large}}}}externalLinks{url site}}}",
     };
 
-    try {
-      final res = await http.post(
-        Uri.parse("https://graphql.anilist.co"),
-        body: params,
-      );
+    final res = await http.post(
+      Uri.parse("https://graphql.anilist.co"),
+      body: params,
+    );
 
-      return AnimeInfo.fromJson(
-        jsonDecode(res.body)["data"]["Media"],
-      );
-    } catch (e) {
-      prints("Failed to get anime info: $e");
-      return null;
-    }
+    return AnimeInfo.fromJson(
+      jsonDecode(res.body)["data"]["Media"],
+    );
   }
 
   static Future<List<SearchResult>> discover() async {

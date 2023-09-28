@@ -8,7 +8,7 @@ import "package:luffy/api/anime.dart";
 import "package:luffy/api/history.dart";
 import "package:luffy/api/mal.dart" as mal;
 import "package:luffy/components/episode_list.dart";
-import "package:luffy/screens/video_player_native.dart";
+import "package:luffy/screens/video_player.dart";
 import "package:luffy/util.dart";
 import "package:skeletons/skeletons.dart";
 import "package:tuple/tuple.dart";

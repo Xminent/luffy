@@ -6,8 +6,8 @@ import "package:luffy/components/video_player/controls.dart";
 import "package:luffy/util.dart";
 import "package:video_player/video_player.dart";
 
-class VideoPlayerScreen extends StatefulWidget {
-  const VideoPlayerScreen({
+class VideoPlayerScreenMobile extends StatefulWidget {
+  const VideoPlayerScreenMobile({
     super.key,
     required this.showId,
     required this.showTitle,
@@ -35,10 +35,11 @@ class VideoPlayerScreen extends StatefulWidget {
   final String showUrl;
 
   @override
-  State<VideoPlayerScreen> createState() => _VideoPlayerScreenState();
+  State<VideoPlayerScreenMobile> createState() =>
+      _VideoPlayerScreenMobileState();
 }
 
-class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
+class _VideoPlayerScreenMobileState extends State<VideoPlayerScreenMobile> {
   VideoPlayerController? _controller;
   BoxFit _fit = BoxFit.contain;
   bool _isBuffering = true;
@@ -403,8 +404,10 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         });
       });
 
-      _controller?.initialize().then((_) => setState(() {}));
-      _controller?.play();
+      _controller?.initialize().then((_) {
+        setState(() {});
+        _controller?.play();
+      });
     });
   }
 

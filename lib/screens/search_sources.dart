@@ -45,6 +45,7 @@ class _SearchScreenSourcesState extends State<SearchScreenSources>
         body: Container(
           color: Theme.of(context).colorScheme.background,
           height: MediaQuery.of(context).size.height,
+          padding: const EdgeInsets.all(16),
           child: SingleChildScrollView(
             child: Column(
               children: [
@@ -78,7 +79,7 @@ class _SearchScreenSourcesState extends State<SearchScreenSources>
 
                     if (searchResults == null) {
                       return const Center(
-                        child: Text("Could not connect with MyAnimeList."),
+                        child: Text("No results found"),
                       );
                     }
 

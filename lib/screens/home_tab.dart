@@ -36,7 +36,7 @@ class _HomeTabScreenState extends State<HomeTabScreen>
     super.initState();
 
     _tabController = TabController(
-      length: _tabs.length, // number of tabs
+      length: _tabs.length,
       vsync: this,
     );
 

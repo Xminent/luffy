@@ -4,7 +4,8 @@ import "package:luffy/api/history.dart";
 import "package:luffy/api/kitsu.dart" as kitsu;
 import "package:luffy/api/mal.dart" as mal;
 import "package:luffy/components/episode_list.dart";
-import "package:luffy/screens/video_player_native.dart";
+import "package:luffy/screens/video_player.dart";
+import "package:luffy/util.dart";
 import "package:string_similarity/string_similarity.dart";
 import "package:tuple/tuple.dart";
 
@@ -89,6 +90,8 @@ class _WatchScreenState extends State<WatchScreen> {
           widget.title.toLowerCase().bestMatch(titles).bestMatchIndex];
     }
 
+    prints("Extractor index BEFORE: $_extractorIndex");
+
     for (; _extractorIndex < sources.length; _extractorIndex++) {
       _extractor = sources[_extractorIndex];
 
@@ -105,6 +108,8 @@ class _WatchScreenState extends State<WatchScreen> {
         _extractorIndex = 0;
       }
 
+      prints("Extractor index AFTER: $_extractorIndex");
+      setState(() {});
       return bestMatch;
     }
 
@@ -303,6 +308,7 @@ class _WatchScreenState extends State<WatchScreen> {
     return SingleChildScrollView(
       child: Container(
         color: Theme.of(context).colorScheme.background,
+        padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             DropdownButton(
@@ -343,7 +349,7 @@ class _WatchScreenState extends State<WatchScreen> {
 
                 if (data == null) {
                   return const Center(
-                    child: Text("Could not connect with MyAnimeList."),
+                    child: Text("No results found"),
                   );
                 }
 

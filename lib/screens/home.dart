@@ -5,6 +5,7 @@ import "package:luffy/api/anime.dart";
 import "package:luffy/api/history.dart";
 import "package:luffy/api/mal.dart";
 import "package:luffy/components/anime_info.dart";
+import "package:luffy/components/drawer.dart";
 import "package:luffy/screens/details.dart";
 import "package:luffy/screens/details_sources.dart";
 
@@ -196,20 +197,7 @@ class _HomeScreenState extends State<HomeScreen>
                   }).toList(),
                 ),
               ),
-              drawer: Drawer(
-                backgroundColor: Theme.of(context).colorScheme.surface,
-                child: ListView(
-                  padding: EdgeInsets.zero,
-                  children: [
-                    DrawerHeader(
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                      child: const Text("Drawer Header"),
-                    )
-                  ],
-                ),
-              ),
+              drawer: const CustomDrawer(),
               body: TabBarView(
                 children: [
                   animeList.watching,
