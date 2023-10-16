@@ -7,6 +7,7 @@ import "package:luffy/api/history.dart";
 import "package:luffy/components/video_player/controls.dart";
 import "package:luffy/util.dart";
 import "package:video_player/video_player.dart";
+import "package:wakelock/wakelock.dart";
 
 class VideoPlayerScreenMobile extends StatefulWidget {
   const VideoPlayerScreenMobile({
@@ -345,6 +346,8 @@ class _VideoPlayerScreenMobileState extends State<VideoPlayerScreenMobile> {
       DeviceOrientation.landscapeRight,
     ]);
 
+    Wakelock.enable();
+
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
       FlutterDisplayMode.setLowRefreshRate();
     }
@@ -518,6 +521,8 @@ class _VideoPlayerScreenMobileState extends State<VideoPlayerScreenMobile> {
       DeviceOrientation.landscapeLeft,
       DeviceOrientation.landscapeRight,
     ]);
+
+    Wakelock.disable();
 
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
       FlutterDisplayMode.setHighRefreshRate();

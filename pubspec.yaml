@@ -52,6 +52,7 @@ dependencies:
       url: https://github.com/tintran-dev/betterplayer.git
   hex: ^0.2.0
   color_log: ^0.0.6
+  wakelock: ^0.6.2
 
 dev_dependencies:
   flutter_test:
