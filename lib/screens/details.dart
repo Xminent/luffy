@@ -22,9 +22,7 @@ class DetailsScreen extends StatefulWidget {
     this.watchedEpisodes,
     this.totalEpisodes,
     this.bannerImageUrl,
-    this.titleEnJp,
-    this.titleJaJp,
-    this.type,
+    this.titleRomaji,
     this.onUpdate,
     this.isMalId = false,
   });
@@ -40,9 +38,7 @@ class DetailsScreen extends StatefulWidget {
   final int? watchedEpisodes;
   final int? totalEpisodes;
   final String? bannerImageUrl;
-  final String? titleEnJp;
-  final String? titleJaJp;
-  final mal.AnimeType? type;
+  final String? titleRomaji;
   final void Function(
     int score,
     int watchedEpisodes,
@@ -128,7 +124,6 @@ class _DetailsScreenState extends State<DetailsScreen>
 
   Widget _buildBody({
     required AnimeStats? animeInfo,
-    required String? coverImageUrl,
     required bool isLoading,
   }) {
     if (isLoading) {
@@ -137,13 +132,14 @@ class _DetailsScreenState extends State<DetailsScreen>
 
     final info = InfoScreen(
       animeInfo: animeInfo,
-      animePoster: widget.imageUrl,
-      coverImageUrl: coverImageUrl,
+      imageUrl: widget.imageUrl,
+      bannerImageUrl: widget.bannerImageUrl,
       title: widget.title,
+      titleRomaji: widget.titleRomaji,
       startDate: widget.startDate != null
           ? DateFormat.yMd().format(widget.startDate!)
           : "???",
-      watchedEpisodes: _watchedEpisodes ?? 0,
+      watchedEpisodes: _watchedEpisodes,
       totalEpisodes: animeInfo?.totalEpisodes ?? 0,
       score: _score,
       status: _status,
@@ -177,6 +173,9 @@ class _DetailsScreenState extends State<DetailsScreen>
         });
       },
       onSaveChanges: _saveChanges,
+      showUpdateButton: _score != _oldScore ||
+          _status != _oldStatus ||
+          _watchedEpisodes != _oldWatchedEpisodes,
     );
 
     final watch = WatchScreen(
@@ -189,12 +188,7 @@ class _DetailsScreenState extends State<DetailsScreen>
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.open_in_new),
-            onPressed: _goToMyAnimeList,
-          ),
-        ],
+        actions: _goToMyAnimeList(),
       ),
       body: TabBarView(
         controller: _tabController,
@@ -232,27 +226,44 @@ class _DetailsScreenState extends State<DetailsScreen>
     );
   }
 
-  Future<void> _goToMyAnimeList() async {
-    final uri = Uri.parse("https://myanimelist.net/anime/${widget.animeId}");
+  List<Widget> _goToMyAnimeList() {
+    final malId = widget.malId;
 
-    if (!await canLaunchUrl(uri)) {
-      return;
+    if (malId == null) {
+      return [];
     }
 
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
+    return [
+      IconButton(
+        icon: const Icon(Icons.open_in_new),
+        onPressed: () async {
+          final uri = Uri.parse("https://myanimelist.net/anime/$malId");
+
+          if (!await canLaunchUrl(uri)) {
+            return;
+          }
+
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        },
+      )
+    ];
   }
 
   Future<void> _saveChanges() async {
     final status = _status;
     final score = _score;
     final watchedEpisodes = _watchedEpisodes;
+    final malId = widget.malId;
 
-    if (status == null || score == null || watchedEpisodes == null) {
+    if (status == null ||
+        score == null ||
+        watchedEpisodes == null ||
+        malId == null) {
       return;
     }
 
     final res = await mal.MalService.updateAnimeListItem(
-      widget.animeId,
+      malId,
       status,
       score: score,
       numWatchedEpisodes: watchedEpisodes,
@@ -374,7 +385,6 @@ class _DetailsScreenState extends State<DetailsScreen>
           builder: (context, snapshot) {
             return _buildBody(
               animeInfo: snapshot.data,
-              coverImageUrl: widget.bannerImageUrl,
               isLoading: snapshot.connectionState != ConnectionState.done,
             );
           },

@@ -4,9 +4,9 @@ import "dart:math";
 
 import "package:flutter/material.dart";
 import "package:flutter/services.dart";
-import "package:flutter_secure_storage/flutter_secure_storage.dart";
 import "package:http/http.dart" as http;
 import "package:luffy/auth.dart";
+import "package:luffy/main.dart";
 import "package:luffy/util.dart";
 import "package:webview_windows/webview_windows.dart";
 
@@ -78,6 +78,7 @@ class LoginWindowsScreenState extends State<LoginWindowsScreen> {
   Future<void> initPlatformState() async {
     try {
       await _controller.initialize();
+
       _subscriptions.add(
         _controller.url.listen((url) async {
           _textController.text = url;
@@ -85,13 +86,6 @@ class LoginWindowsScreenState extends State<LoginWindowsScreen> {
           handleNavigationStateChange(await _oauthVars, Uri.parse(url));
         }),
       );
-
-      // _subscriptions.add(
-      //   _controller.containsFullScreenElementChanged.listen((flag) {
-      //     debugPrint("Contains fullscreen element: $flag");
-      //     windowManager.setFullScreen(flag);
-      //   }),
-      // );
 
       await _controller.setBackgroundColor(Colors.transparent);
       await _controller.setPopupWindowPolicy(WebviewPopupWindowPolicy.deny);
@@ -139,86 +133,82 @@ class LoginWindowsScreenState extends State<LoginWindowsScreen> {
           fontWeight: FontWeight.w900,
         ),
       );
-    } else {
-      return Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            Card(
-              elevation: 0,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      decoration: const InputDecoration(
-                        hintText: "URL",
-                        contentPadding: EdgeInsets.all(10.0),
-                      ),
-                      textAlignVertical: TextAlignVertical.center,
-                      controller: _textController,
-                      onSubmitted: (val) {
-                        _controller.loadUrl(val);
-                      },
+    }
+
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        children: [
+          Card(
+            elevation: 0,
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    decoration: const InputDecoration(
+                      hintText: "URL",
+                      contentPadding: EdgeInsets.all(10.0),
                     ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.refresh),
-                    splashRadius: 20,
-                    onPressed: () {
-                      _controller.reload();
+                    textAlignVertical: TextAlignVertical.center,
+                    controller: _textController,
+                    onSubmitted: (val) {
+                      _controller.loadUrl(val);
                     },
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.developer_mode),
-                    tooltip: "Open DevTools",
-                    splashRadius: 20,
-                    onPressed: () {
-                      _controller.openDevTools();
+                ),
+                IconButton(
+                  icon: const Icon(Icons.refresh),
+                  splashRadius: 20,
+                  onPressed: () {
+                    _controller.reload();
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.developer_mode),
+                  tooltip: "Open DevTools",
+                  splashRadius: 20,
+                  onPressed: () {
+                    _controller.openDevTools();
+                  },
+                )
+              ],
+            ),
+          ),
+          Expanded(
+            child: Card(
+              color: Colors.transparent,
+              elevation: 0,
+              clipBehavior: Clip.antiAliasWithSaveLayer,
+              child: Stack(
+                children: [
+                  Webview(
+                    _controller,
+                    permissionRequested: _onPermissionRequested,
+                  ),
+                  StreamBuilder<LoadingState>(
+                    stream: _controller.loadingState,
+                    builder: (context, snapshot) {
+                      if (snapshot.hasData &&
+                          snapshot.data == LoadingState.loading) {
+                        return const LinearProgressIndicator();
+                      } else {
+                        return const SizedBox();
+                      }
                     },
-                  )
+                  ),
                 ],
               ),
             ),
-            Expanded(
-              child: Card(
-                color: Colors.transparent,
-                elevation: 0,
-                clipBehavior: Clip.antiAliasWithSaveLayer,
-                child: Stack(
-                  children: [
-                    Webview(
-                      _controller,
-                      permissionRequested: _onPermissionRequested,
-                    ),
-                    StreamBuilder<LoadingState>(
-                      stream: _controller.loadingState,
-                      builder: (context, snapshot) {
-                        if (snapshot.hasData &&
-                            snapshot.data == LoadingState.loading) {
-                          return const LinearProgressIndicator();
-                        } else {
-                          return const SizedBox();
-                        }
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> handleNavigationStateChange(OauthVars oauthVars, Uri url) async {
-    if (!url.toString().contains(malRedirectUri)) {
-      return;
-    }
-
     final code = url.queryParameters["code"];
 
-    if (code == null) {
+    if (!url.toString().contains(malRedirectUri) || code == null) {
       return;
     }
 
@@ -244,23 +234,17 @@ class LoginWindowsScreenState extends State<LoginWindowsScreen> {
 
     prints(json);
 
-    const encryptedStorage = FlutterSecureStorage();
-
-    await encryptedStorage.write(
-      key: "access_token",
-      value: json["access_token"],
-    );
-    await encryptedStorage.write(
-      key: "refresh_token",
-      value: json["refresh_token"],
-    );
-    await encryptedStorage.write(
-      key: "expiration_time",
-      value: (DateTime.now().millisecondsSinceEpoch + json["expires_in"] * 1000)
-          .toString(),
+    final token = await MalToken.getInstance(
+      token: {
+        "access_token": json["access_token"],
+        "refresh_token": json["refresh_token"],
+        "expiration_time":
+            DateTime.now().millisecondsSinceEpoch + json["expires_in"] * 1000,
+      },
     );
 
     if (context.mounted) {
+      MyApp.of(context)!.setToken(token);
       Navigator.pushReplacementNamed(context, "/home");
     }
   }
@@ -271,11 +255,10 @@ class LoginWindowsScreenState extends State<LoginWindowsScreen> {
       floatingActionButton: FloatingActionButton(
         tooltip: _isWebviewSuspended ? "Resume webview" : "Suspend webview",
         onPressed: () async {
-          if (_isWebviewSuspended) {
-            await _controller.resume();
-          } else {
-            await _controller.suspend();
-          }
+          await (_isWebviewSuspended
+              ? _controller.resume()
+              : _controller.suspend());
+
           setState(() {
             _isWebviewSuspended = !_isWebviewSuspended;
           });

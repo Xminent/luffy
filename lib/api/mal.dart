@@ -483,7 +483,7 @@ class MalService {
     try {
       final characters = await getAnimeCharacters(id);
 
-      prints("Got anime characters: ${jsonEncode(characters)}");
+      // prints("Got anime characters: ${jsonEncode(characters)}");
 
       final res =
           await http.get(Uri.parse("https://api.jikan.moe/v4/anime/$id/full"));
@@ -787,6 +787,11 @@ class MalService {
 
       final unformattedList = await jsonDecode(data);
       final entry = unformattedList[animeId.toString()];
+
+      if (entry == null) {
+        return res;
+      }
+
       final oldStatus = entry["status"];
 
       // Set the new values.
@@ -899,12 +904,9 @@ class MalService {
     }
 
     final animeList = await jsonDecode(data);
-
-    prints(animeList);
-
     final anime = animeList[animeId.toString()];
 
-    prints("Anime from storage: $anime");
+    prints("Got our list status for anime: $animeId from storage: $anime");
 
     if (anime == null) {
       return null;
@@ -985,23 +987,38 @@ class MalService {
   }
 
   static Future<List<Episode>> getAnimeEpisodes(int animeId) async {
+    final ret = <Episode>[];
+
     try {
-      final res = await http.get(
+      var res = await http.get(
         Uri.parse("https://api.jikan.moe/v4/anime/$animeId/episodes?page=1"),
       );
 
-      final data = jsonDecode(res.body);
-      final ret = <Episode>[];
+      var data = jsonDecode(res.body);
+      var page = 2;
 
-      for (final e in data["data"]) {
+      for (final e in data["data"] ?? []) {
         ret.add(Episode.fromJson(e));
       }
 
-      return ret;
+      while (data["pagination"]?["has_next_page"] ?? false) {
+        res = await http.get(
+          Uri.parse(
+            "https://api.jikan.moe/v4/anime/$animeId/episodes?page=${page++}",
+          ),
+        );
+
+        data = jsonDecode(res.body);
+
+        for (final e in data["data"] ?? []) {
+          ret.add(Episode.fromJson(e));
+        }
+      }
     } catch (e) {
-      prints("Failed to get anime episodes: $e");
-      return [];
+      prints("Failed to get anime episodes from Jikan: $e");
     }
+
+    return ret;
   }
 }
 

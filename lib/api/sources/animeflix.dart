@@ -16,7 +16,7 @@ final _dio = () {
     ),
   );
 
-  ret.interceptors.add(CookieManager(PersistCookieJar()));
+  ret.interceptors.add(CookieManager(CookieJar()));
 
   return ret;
 }();

@@ -1,4 +1,5 @@
 import "package:flutter/material.dart";
+import "package:flutter_html/flutter_html.dart";
 
 class ClickableText extends StatefulWidget {
   const ClickableText(
@@ -31,12 +32,12 @@ class _ClickableTextState extends State<ClickableText> {
           _isExpanded = !_isExpanded;
         });
       },
-      child: Text(
-        widget.text,
-        style: widget.style,
-        textAlign: widget.textAlign,
-        maxLines: _isExpanded ? null : widget.maxLines,
-        overflow: _isExpanded ? TextOverflow.visible : widget.overflow,
+      child: Html(
+        data: widget.text,
+        // style: widget.style,
+        // textAlign: widget.textAlign,
+        // maxLines: _isExpanded ? null : widget.maxLines,
+        // overflow: _isExpanded ? TextOverflow.visible : widget.overflow,
       ),
     );
   }

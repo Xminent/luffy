@@ -1,6 +1,6 @@
 import "package:html/parser.dart";
 import "package:http/http.dart" as http;
-import "package:luffy/api/extractors/nineanime.dart";
+import 'package:luffy/api/sources/nineanime.dart';
 import "package:luffy/js_unpacker.dart";
 import "package:luffy/util.dart";
 
@@ -16,12 +16,7 @@ class FilemoonExtractor {
       return element.text.contains("eval");
     }).first;
 
-    final unpacked = JsUnpacker(jsE.text).unpack();
-
-    if (unpacked == null) {
-      return [];
-    }
-
+    final unpacked = JsUnpacker.unpack(jsE.text).toString();
     final masterUrl = unpacked.substringAfter('{file:"').substringBefore('"}');
     final masterPlaylistRes = await http.get(Uri.parse(masterUrl));
     final masterPlaylist = masterPlaylistRes.body;

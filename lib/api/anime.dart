@@ -1,29 +1,29 @@
 import "package:html/dom.dart";
 import "package:html/parser.dart";
-import "package:luffy/api/extractors/animeflix.dart";
-import "package:luffy/api/extractors/animepahe.dart";
-import "package:luffy/api/extractors/gogoanime.dart";
-import "package:luffy/api/extractors/nineanime.dart";
-import "package:luffy/api/extractors/superstream.dart";
+import 'package:luffy/api/sources/animeflix.dart';
+import 'package:luffy/api/sources/animepahe.dart';
+import 'package:luffy/api/sources/gogoanime.dart';
+import 'package:luffy/api/sources/nineanime.dart';
+import 'package:luffy/api/sources/superstream.dart';
 import "package:luffy/util/subtitle.dart";
 
 class Anime {
   Anime({
     required this.title,
-    required this.imageUrl,
+    this.imageUrl,
     required this.url,
   });
 
   final String title;
-  final String imageUrl;
+  final String? imageUrl;
   final String url;
 }
 
 class Episode {
   Episode({
-    required this.title,
+    this.title,
     required this.url,
-    required this.thumbnailUrl,
+    this.thumbnailUrl,
     this.rating,
     this.synopsis,
   });

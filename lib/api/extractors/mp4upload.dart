@@ -1,5 +1,5 @@
 import "package:http/http.dart" as http;
-import "package:luffy/api/extractors/nineanime.dart";
+import 'package:luffy/api/sources/nineanime.dart';
 import "package:luffy/util.dart";
 
 class Mp4uploadExtractor {

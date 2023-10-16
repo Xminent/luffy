@@ -1,24 +1,28 @@
 import "package:cached_network_image/cached_network_image.dart";
 import "package:flutter/material.dart" hide Scrollable;
+import "package:intl/intl.dart";
 import "package:luffy/api/anilist.dart";
 import "package:luffy/api/mal.dart" as mal;
+import "package:luffy/components/anime_card.dart";
 import "package:luffy/components/blinking_button.dart";
 import "package:luffy/components/clickable_text.dart";
 import "package:luffy/components/details/character_card.dart";
-import "package:luffy/components/details/character_scrollable.dart";
 import "package:luffy/components/details/relation_card.dart";
+import "package:luffy/components/details/scrollable.dart";
 import "package:luffy/components/mal_controls.dart";
-import "package:luffy/dialogs.dart";
+import "package:luffy/components/parallax_container.dart";
 import "package:luffy/screens/details.dart";
+import "package:luffy/screens/youtube_embed.dart";
 
 class InfoScreen extends StatefulWidget {
   const InfoScreen({
     super.key,
     required this.animeInfo,
     required this.title,
+    this.titleRomaji,
     required this.startDate,
-    this.coverImageUrl,
-    this.animePoster,
+    this.bannerImageUrl,
+    this.imageUrl,
     this.synopsis,
     required this.watchedEpisodes,
     required this.totalEpisodes,
@@ -28,14 +32,16 @@ class InfoScreen extends StatefulWidget {
     required this.onStatusChanged,
     required this.onWatchedEpisodesChanged,
     required this.onSaveChanges,
+    required this.showUpdateButton,
   });
 
   final AnimeStats? animeInfo;
-  final String? animePoster;
-  final String? coverImageUrl;
+  final String? imageUrl;
+  final String? bannerImageUrl;
   final String startDate;
   final String? synopsis;
   final String title;
+  final String? titleRomaji;
   final int totalEpisodes;
   final int? watchedEpisodes;
   final int? score;
@@ -44,22 +50,23 @@ class InfoScreen extends StatefulWidget {
   final void Function(mal.AnimeListStatus) onStatusChanged;
   final void Function(int) onWatchedEpisodesChanged;
   final void Function() onSaveChanges;
+  final bool showUpdateButton;
 
   @override
   State<InfoScreen> createState() => _InfoScreenState();
 }
 
 class _InfoScreenState extends State<InfoScreen> {
-  late final int? _score = widget.score;
-  late final mal.AnimeListStatus? _status = widget.status;
-  late final int? _watchedEpisodes = widget.watchedEpisodes;
-
   List<Widget> _makeMalControls() {
     final score = widget.score;
     final status = widget.status;
     final watchedEpisodes = widget.watchedEpisodes;
+    final malId = widget.animeInfo?.anime?.malId;
 
-    if (score == null || status == null || watchedEpisodes == null) {
+    if (score == null ||
+        status == null ||
+        watchedEpisodes == null ||
+        malId == null) {
       return [];
     }
 
@@ -78,9 +85,7 @@ class _InfoScreenState extends State<InfoScreen> {
   }
 
   List<Widget> _makeUpdateMalButton() {
-    if (widget.score == _score &&
-        widget.status == _status &&
-        widget.watchedEpisodes == _watchedEpisodes) {
+    if (!widget.showUpdateButton) {
       return [];
     }
 
@@ -130,31 +135,10 @@ class _InfoScreenState extends State<InfoScreen> {
               ),
             ),
             onPressed: () async {
-              final res = await mal.MalService.updateAnimeListItem(
-                animeInfo.malId,
-                mal.AnimeListStatus.planToWatch,
-                score: 0,
-                numWatchedEpisodes: 0,
-              );
-
-              if (res == null || res.statusCode != 200) {
-                if (context.mounted) {
-                  showErrorDialog(
-                    context,
-                    "Could not add anime to list. I'm guessing that MyAnimeList is down or you are not connected to the internet. Please try to add again later.",
-                  );
-                }
-
-                return;
-              }
-
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("Anime added to list!"),
-                  ),
-                );
-              }
+              widget.onScoreChanged(0);
+              widget.onStatusChanged(mal.AnimeListStatus.planToWatch);
+              widget.onWatchedEpisodesChanged(0);
+              widget.onSaveChanges();
             },
             child: const Text("Add to list"),
           ),
@@ -166,11 +150,14 @@ class _InfoScreenState extends State<InfoScreen> {
   Row _makeRow(String left, String right) => Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(left),
+          Flexible(child: Text(left)),
           const SizedBox(width: 8),
-          Text(
-            right,
-            style: TextStyle(color: Theme.of(context).colorScheme.primary),
+          Flexible(
+            flex: 3,
+            child: Text(
+              right,
+              style: TextStyle(color: Theme.of(context).colorScheme.primary),
+            ),
           ),
         ],
       );
@@ -182,37 +169,50 @@ class _InfoScreenState extends State<InfoScreen> {
       return const SizedBox.shrink();
     }
 
-    return GridView.builder(
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 8,
-        mainAxisExtent: 40,
-        mainAxisSpacing: 8,
-        childAspectRatio: 3 / 2,
-      ),
-      itemCount: genres.length,
-      shrinkWrap: true,
-      itemBuilder: (context, idx) {
-        return Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: BorderRadius.circular(10),
+    return Column(
+      children: [
+        const Text(
+          "Genres",
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Center(
-              child: Text(
-                genres[idx],
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onBackground,
-                  fontWeight: FontWeight.bold,
+          textAlign: TextAlign.left,
+        ),
+        const SizedBox(height: 8),
+        GridView.builder(
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: 8,
+            mainAxisExtent: 40,
+            mainAxisSpacing: 8,
+            childAspectRatio: 3 / 2,
+          ),
+          itemCount: genres.length,
+          shrinkWrap: true,
+          itemBuilder: (context, idx) {
+            return Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Center(
+                  child: Text(
+                    genres[idx],
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onBackground,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
-        );
-      },
-      physics: const NeverScrollableScrollPhysics(),
+            );
+          },
+          physics: const NeverScrollableScrollPhysics(),
+        ),
+      ],
     );
   }
 
@@ -250,6 +250,29 @@ class _InfoScreenState extends State<InfoScreen> {
     ];
   }
 
+  List<Widget> _makeRecommendations(AnimeStats? animeInfo) {
+    final recommendations = animeInfo?.anime?.recommendations;
+
+    if (recommendations == null || recommendations.isEmpty) {
+      return [];
+    }
+
+    return [
+      const SizedBox(height: 16),
+      Scrollable(
+        items: recommendations,
+        title: "Recommendations",
+        builder: (_, idx) => AnimeCard(
+          anime: recommendations[idx],
+          width: 120,
+          showTitle: true,
+          opensDetails: true,
+        ),
+        spaceBetween: 24,
+      )
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     final animeInfo = widget.animeInfo;
@@ -257,54 +280,23 @@ class _InfoScreenState extends State<InfoScreen> {
 
     return SingleChildScrollView(
       child: Container(
-        color: Theme.of(context).colorScheme.background,
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             SizedBox(
               height: 200,
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: widget.coverImageUrl != null
-                        ? CachedNetworkImage(
-                            imageUrl: widget.coverImageUrl!,
-                            errorWidget: (context, url, error) => Container(
-                              color: Theme.of(context).colorScheme.surface,
-                              width: double.infinity,
-                              height: double.infinity,
-                            ),
-                            fit: BoxFit.cover,
-                          )
-                        : Container(
-                            color: Theme.of(context).colorScheme.surface,
-                            width: double.infinity,
-                            height: double.infinity,
-                          ),
-                  ),
-                  Positioned(
-                    top: 50,
-                    left: 0,
-                    right: 0,
-                    child: Center(
-                      child: widget.animePoster != null
-                          ? CachedNetworkImage(
-                              imageUrl: widget.animePoster!,
-                              errorWidget: (context, url, error) => Container(
-                                color: Theme.of(context).colorScheme.surface,
-                              ),
-                              width: 100,
-                              height: 140,
-                              fit: BoxFit.cover,
-                            )
-                          : Container(
-                              color: Theme.of(context).colorScheme.surface,
-                              width: 100,
-                              height: 140,
-                            ),
+              child: ParallaxContainer(
+                backgroundImageUrl: widget.bannerImageUrl,
+                child: Center(
+                  child: CachedNetworkImage(
+                    imageUrl:
+                        widget.imageUrl ?? "https://via.placeholder.com/150",
+                    errorWidget: (context, url, error) => Container(
+                      color: Theme.of(context).colorScheme.surface,
                     ),
+                    fit: BoxFit.cover,
                   ),
-                ],
+                ),
               ),
             ),
             const SizedBox(height: 8),
@@ -326,8 +318,6 @@ class _InfoScreenState extends State<InfoScreen> {
               _makeRow("Mean Score:", "${animeInfo?.score}"),
             ],
             const SizedBox(height: 8),
-            _makeRow("Status:", "${animeInfo?.status ?? "???"}"),
-            const SizedBox(height: 8),
             _makeRow("Total Episodes:", "${animeInfo?.totalEpisodes ?? "???"}"),
             const SizedBox(height: 8),
             _makeRow(
@@ -347,6 +337,28 @@ class _InfoScreenState extends State<InfoScreen> {
             const SizedBox(height: 8),
             _makeRow("Studio:", studios.isNotEmpty ? studios[0].name : "???"),
             const SizedBox(height: 8),
+            _makeRow(
+              "Season:",
+              animeInfo?.anime?.season ?? "???",
+            ),
+            const SizedBox(height: 8),
+            if (animeInfo?.anime?.startDate != null)
+              _makeRow(
+                "Start Date:",
+                DateFormat.yMd().format(animeInfo!.anime!.startDate!),
+              ),
+            const SizedBox(height: 8),
+            if (animeInfo?.anime?.endDate != null)
+              _makeRow(
+                "End Date:",
+                DateFormat.yMd().format(animeInfo!.anime!.endDate!),
+              ),
+            const SizedBox(height: 8),
+            _makeRow(
+              "Name Romaji:",
+              widget.titleRomaji ?? "???",
+            ),
+            const SizedBox(height: 8),
             const Text(
               "Synopsis",
               style: TextStyle(
@@ -365,9 +377,22 @@ class _InfoScreenState extends State<InfoScreen> {
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 16),
+            if (animeInfo?.anime?.trailer != null) ...[
+              const Text(
+                "Trailer",
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
+                textAlign: TextAlign.left,
+              ),
+              const SizedBox(height: 8),
+              YouTubeEmbed(url: animeInfo!.anime!.trailer!),
+            ],
             _makeGenres(animeInfo!.anime),
             ..._makeCharacters(animeInfo),
             ..._makeRelations(animeInfo),
+            ..._makeRecommendations(animeInfo),
           ],
         ),
       ),

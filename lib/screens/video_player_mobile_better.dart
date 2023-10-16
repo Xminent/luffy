@@ -1,3 +1,4 @@
+import "package:better_player/better_player.dart";
 import "package:flutter/foundation.dart";
 import "package:flutter/material.dart";
 import "package:flutter/services.dart";
@@ -6,10 +7,9 @@ import "package:luffy/api/anime.dart";
 import "package:luffy/api/history.dart";
 import "package:luffy/components/video_player/controls.dart";
 import "package:luffy/util.dart";
-import "package:video_player/video_player.dart";
 
-class VideoPlayerScreenMobile extends StatefulWidget {
-  const VideoPlayerScreenMobile({
+class VideoPlayerScreenMobileBetter extends StatefulWidget {
+  const VideoPlayerScreenMobileBetter({
     super.key,
     required this.showId,
     required this.showTitle,
@@ -37,15 +37,16 @@ class VideoPlayerScreenMobile extends StatefulWidget {
   final String showUrl;
 
   @override
-  State<VideoPlayerScreenMobile> createState() =>
-      _VideoPlayerScreenMobileState();
+  State<VideoPlayerScreenMobileBetter> createState() =>
+      _VideoPlayerScreenMobileBetterState();
 }
 
-class _VideoPlayerScreenMobileState extends State<VideoPlayerScreenMobile> {
-  VideoPlayerController? _controller;
+class _VideoPlayerScreenMobileBetterState
+    extends State<VideoPlayerScreenMobileBetter> {
+  BetterPlayerController? _betterPlayerController;
   BoxFit _fit = BoxFit.contain;
   bool _isBuffering = true;
-  bool _hasResumed = false;
+  final bool _hasResumed = false;
   VideoSource? _currentSource;
   List<VideoSource>? _sources;
   Subtitle? _currentSubtitle;
@@ -56,110 +57,54 @@ class _VideoPlayerScreenMobileState extends State<VideoPlayerScreenMobile> {
   late int _currentEpisodeNum = widget.episodeNum;
   bool _isRequestInProgress = false;
 
-  void _onVideoControllerUpdate() {
-    final controller = _controller;
-
-    if (!mounted || controller == null) {
-      return;
-    }
-
-    if (controller.value.hasError) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            controller.value.errorDescription ?? "Unknown error",
-          ),
-        ),
-      );
-
-      Navigator.pop(context);
-    }
-
-    setState(() {
-      _isBuffering = controller.value.isBuffering;
-
-      final savedProgress = widget.savedProgress;
-
-      if (!_isBuffering &&
-          !_hasResumed &&
-          controller.value.duration != Duration.zero &&
-          savedProgress != null) {
-        prints("Seeking to $savedProgress");
-
-        controller.seekTo(
-          Duration(
-            milliseconds:
-                (controller.value.duration.inMilliseconds * savedProgress)
-                    .toInt(),
-          ),
-        );
-
-        setState(() {
-          _hasResumed = true;
-        });
-      }
-
-      if (!_isBuffering &&
-          !_hasResumedFromSourceChange &&
-          controller.value.duration != Duration.zero) {
-        prints("Seeking to $_positionBeforeSourceChange");
-        controller.seekTo(
-          _positionBeforeSourceChange,
-        );
-
-        setState(() {
-          _hasResumedFromSourceChange = true;
-        });
-      }
-    });
-  }
-
   void _onRewind() {
-    final controller = _controller;
+    final controller = _betterPlayerController?.videoPlayerController;
+    final pos = controller?.value.position.inMilliseconds;
+    final dur = controller?.value.duration?.inMilliseconds;
 
-    if (controller == null) {
+    if (pos == null || dur == null) {
       return;
     }
 
-    controller.seekTo(
+    controller?.seekTo(
       Duration(
-        milliseconds: (controller.value.position.inMilliseconds - 10000).clamp(
+        milliseconds: (pos - 10000).clamp(
           0,
-          controller.value.duration.inMilliseconds,
+          dur,
         ),
       ),
     );
   }
 
   void _onPlayPause() {
-    final controller = _controller;
+    final controller = _betterPlayerController?.videoPlayerController;
 
-    if (controller == null) {
-      return;
-    }
-
-    controller.value.isPlaying ? controller.pause() : controller.play();
+    (controller?.value.isPlaying ?? false)
+        ? controller?.pause()
+        : controller?.play();
   }
 
   void _onFastForward() {
-    final controller = _controller;
+    final controller = _betterPlayerController?.videoPlayerController;
+    final pos = controller?.value.position.inMilliseconds;
+    final dur = controller?.value.duration?.inMilliseconds;
 
-    if (controller == null) {
+    if (pos == null || dur == null) {
       return;
     }
 
-    controller.seekTo(
+    controller?.seekTo(
       Duration(
-        milliseconds: (controller.value.position.inMilliseconds + 10000).clamp(
+        milliseconds: (pos + 10000).clamp(
           0,
-          controller.value.duration.inMilliseconds,
+          dur,
         ),
       ),
     );
   }
 
   void _onProgressChanged(Duration position) {
-    _controller?.seekTo(position);
+    _betterPlayerController?.videoPlayerController?.seekTo(position);
   }
 
   void _onFitChanged(BoxFit fit) {
@@ -169,7 +114,7 @@ class _VideoPlayerScreenMobileState extends State<VideoPlayerScreenMobile> {
   }
 
   void _onSpeedChanged(double speed) {
-    _controller?.setPlaybackSpeed(speed);
+    _betterPlayerController?.videoPlayerController?.setSpeed(speed);
   }
 
   void _onSubtitleOffsetChanged(double subtitleOffset) {
@@ -178,33 +123,21 @@ class _VideoPlayerScreenMobileState extends State<VideoPlayerScreenMobile> {
     });
   }
 
-  void _onSourceChanged(VideoSource source) {
-    final oldController = _controller;
-    final oldPosition = oldController?.value.position;
+  Future<void> _onSourceChanged(VideoSource source) async {
+    final oldPosition =
+        _betterPlayerController?.videoPlayerController?.value.position;
 
     if (oldPosition == null) {
       return;
     }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await oldController?.dispose();
+    await _betterPlayerController?.videoPlayerController?.setNetworkDataSource(
+      source.videoUrl,
+    );
 
-      prints("VideoPlayer source changed to ${source.description}");
-
-      _controller = VideoPlayerController.networkUrl(
-        Uri.parse(source.videoUrl),
-      );
-
-      _controller?.addListener(_onVideoControllerUpdate);
-
-      _controller?.initialize().then((_) {
-        setState(() {
-          _positionBeforeSourceChange = oldPosition;
-          _hasResumedFromSourceChange = false;
-        });
-
-        _controller?.play();
-      });
+    setState(() {
+      _positionBeforeSourceChange = oldPosition;
+      _hasResumedFromSourceChange = false;
     });
   }
 
@@ -276,28 +209,20 @@ class _VideoPlayerScreenMobileState extends State<VideoPlayerScreenMobile> {
         _isRequestInProgress = false;
       });
 
-      final oldController = _controller;
-
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        await oldController?.dispose();
-
-        _controller = VideoPlayerController.networkUrl(
-          Uri.parse(sources.first.videoUrl),
-        );
-
-        _controller?.addListener(_onVideoControllerUpdate);
-
-        _controller?.initialize().then((_) {
-          setState(() {});
-          _controller?.play();
-        });
-      });
+      _betterPlayerController?.videoPlayerController
+          ?.setNetworkDataSource(sources.first.videoUrl);
     });
   }
 
-  void _syncProgress(VideoPlayerController controller) {
-    final pos = controller.value.position.inMilliseconds;
-    final dur = controller.value.duration.inMilliseconds;
+  void _syncProgress(BetterPlayerController controller) {
+    final pos = controller.videoPlayerController?.value.position.inMilliseconds;
+    final dur =
+        controller.videoPlayerController?.value.duration?.inMilliseconds;
+
+    if (pos == null || dur == null) {
+      return;
+    }
+
     final progress = (pos / dur).clamp(0.0, 1.0);
 
     if (!progress.isFinite || pos == 0) {
@@ -313,7 +238,7 @@ class _VideoPlayerScreenMobileState extends State<VideoPlayerScreenMobile> {
         id: widget.showId,
         animeId: widget.animeId,
         title: widget.showTitle,
-        imageUrl: currentEpisode.thumbnailUrl ?? widget.imageUrl,
+        imageUrl: currentEpisode.thumbnailUrl ?? "",
         progress: {},
         totalEpisodes: widget.episodes.length,
         sources: {
@@ -405,39 +330,41 @@ class _VideoPlayerScreenMobileState extends State<VideoPlayerScreenMobile> {
 
       prints("VideoPlayer source changed to ${sources.first.videoUrl}");
 
-      _controller = VideoPlayerController.networkUrl(
-        Uri.parse(
-          sources.first.videoUrl,
-        ),
+      final BetterPlayerConfiguration betterPlayerConfiguration =
+          BetterPlayerConfiguration(
+        aspectRatio: 16 / 9,
+        fit: _fit,
       );
 
-      _controller?.addListener(_onVideoControllerUpdate);
+      final BetterPlayerDataSource dataSource = BetterPlayerDataSource(
+        BetterPlayerDataSourceType.network,
+        sources.first.videoUrl,
+        videoFormat: BetterPlayerVideoFormat.hls,
+      );
 
-      _controller?.initialize().then((_) {
-        setState(() {});
-        _controller?.play();
-      });
+      _betterPlayerController =
+          BetterPlayerController(betterPlayerConfiguration);
+      _betterPlayerController!.setupDataSource(dataSource);
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final controller = _controller;
-    final isInitialized =
-        (controller?.value.isInitialized ?? false) && controller != null;
-    final buffered = controller?.value.buffered ?? [];
+    final controller = _betterPlayerController;
+    final isInitialized = controller != null;
+    final buffered = controller?.videoPlayerController?.value.buffered ?? [];
+    final pos = controller?.videoPlayerController?.value.position;
+    final dur = controller?.videoPlayerController?.value.duration;
 
     return WillPopScope(
       onWillPop: () async {
-        final controller = _controller;
-
-        if (controller == null) {
+        if (controller == null || pos == null || dur == null) {
           return true;
         }
 
         // Pop it manually.
-        final progress = controller.value.position.inMilliseconds /
-            controller.value.duration.inMilliseconds;
+        final progress =
+            (pos.inMilliseconds / dur.inMilliseconds).clamp(0.0, 1.0);
 
         Navigator.pop(context, progress.isFinite ? progress : null);
 
@@ -449,35 +376,30 @@ class _VideoPlayerScreenMobileState extends State<VideoPlayerScreenMobile> {
             color: Colors.black,
             child: Stack(
               children: [
-                SizedBox.expand(
-                  child: FittedBox(
-                    fit: _fit,
-                    child: SizedBox(
-                      width: controller?.value.size.width,
-                      height: controller?.value.size.height,
-                      child: isInitialized
-                          ? VideoPlayer(
-                              controller,
-                            )
-                          : Container(),
-                    ),
-                  ),
+                AspectRatio(
+                  aspectRatio: 16 / 9,
+                  child: isInitialized
+                      ? BetterPlayer(controller: controller)
+                      : Container(),
                 ),
                 ControlsOverlay(
                   isBuffering: _isBuffering,
-                  isPlaying: controller?.value.isPlaying ?? false,
-                  duration: controller?.value.duration ?? Duration.zero,
-                  position: controller?.value.position ?? Duration.zero,
+                  isPlaying:
+                      controller?.videoPlayerController?.value.isPlaying ??
+                          false,
+                  duration: dur ?? Duration.zero,
+                  position: pos ?? Duration.zero,
                   buffered:
                       buffered.isNotEmpty ? buffered.first.end : Duration.zero,
-                  size: controller?.value.size ?? Size.zero,
+                  size: controller?.videoPlayerController?.value.size ??
+                      Size.zero,
                   showTitle: widget.showTitle,
                   episodeTitle:
                       widget.episodes[_currentEpisodeNum].title ?? "Untitled",
                   episodeNum: _currentEpisodeNum,
                   sourceName: widget.sourceName,
                   fit: _fit,
-                  speed: controller?.value.playbackSpeed ?? 1.0,
+                  speed: controller?.videoPlayerController?.value.speed ?? 1.0,
                   subtitleOffset: _subtitleOffset,
                   subtitle: _currentSubtitle,
                   subtitles: _subtitles,
@@ -505,11 +427,9 @@ class _VideoPlayerScreenMobileState extends State<VideoPlayerScreenMobile> {
 
   @override
   void dispose() {
-    if (_controller != null) {
-      _syncProgress(_controller!);
+    if (_betterPlayerController != null) {
+      _syncProgress(_betterPlayerController!);
     }
-
-    _controller?.dispose();
 
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 

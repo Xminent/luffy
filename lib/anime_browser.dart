@@ -2,7 +2,7 @@ import "package:flutter/foundation.dart";
 import "package:flutter/material.dart";
 import "package:flutter_inappwebview/flutter_inappwebview.dart";
 import "package:luffy/api/anime.dart";
-import "package:luffy/screens/video_player_mobile.dart";
+import "package:luffy/screens/video_player.dart";
 import "package:url_launcher/url_launcher.dart";
 
 class AnimeBrowser extends StatefulWidget {
@@ -182,7 +182,7 @@ class _AnimeBrowserState extends State<AnimeBrowser> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => VideoPlayerScreenMobile(
+                            builder: (context) => VideoPlayerScreen(
                               showId: "test",
                               showTitle: "Video",
                               episode: Episode(

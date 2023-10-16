@@ -9,7 +9,6 @@ import "package:luffy/api/history.dart";
 import "package:luffy/api/mal.dart" as mal;
 import "package:luffy/components/episode_list.dart";
 import "package:luffy/screens/video_player.dart";
-import "package:luffy/util.dart";
 import "package:skeletons/skeletons.dart";
 import "package:tuple/tuple.dart";
 
@@ -99,10 +98,12 @@ class _DetailsScreenSourcesState extends State<DetailsScreenSources>
           showId: widget.showId,
           showTitle: widget.title,
           episode: episode,
-          episodeNum: idx + 1,
+          episodeNum: idx,
           sourceName: widget.extractor.name,
           savedProgress: episodeProgress,
-          imageUrl: widget.imageUrl ?? animeInfo.anime?.imageUrl,
+          imageUrl: episode.thumbnailUrl ??
+              widget.imageUrl ??
+              animeInfo.anime?.imageUrl,
           episodes: animeInfo.episodes,
           sourceFetcher: (ep) => widget.extractor.getSources(ep),
           showUrl: widget.anime.url,
@@ -121,9 +122,11 @@ class _DetailsScreenSourcesState extends State<DetailsScreenSources>
     final episodes = await widget.extractor.getEpisodes(widget.anime);
     final history = await HistoryService.getMedia(widget.showId);
 
+    // prints("History for ${widget.showId}: ${history?.toJson()}");
+
     final episodeProgress = episodes.asMap().entries.map((e) {
       final idx = e.key;
-      final value = history?.progress[idx + 1];
+      final value = history?.progress[idx];
 
       if (value == null) {
         return null;
@@ -136,7 +139,7 @@ class _DetailsScreenSourcesState extends State<DetailsScreenSources>
         ? await mal.MalService.getAnimeInfo(widget.animeId!)
         : null;
 
-    prints("anime: $anime");
+    // prints("anime: $anime");
 
     return _AnimeAndEpisodes(
       anime: anime,
@@ -288,9 +291,6 @@ class _DetailsScreenSourcesState extends State<DetailsScreenSources>
 
     return Container(
       height: MediaQuery.of(context).size.height,
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.background,
-      ),
       padding: const EdgeInsets.all(16),
       child: SingleChildScrollView(
         child: Column(
@@ -469,7 +469,6 @@ class _DetailsScreenSourcesState extends State<DetailsScreenSources>
 
   Widget _skeletonView() => Container(
         padding: const EdgeInsets.all(16),
-        color: Theme.of(context).colorScheme.background,
         child: SkeletonItem(
           child: Column(
             children: [

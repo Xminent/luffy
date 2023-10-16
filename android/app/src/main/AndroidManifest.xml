@@ -2,12 +2,13 @@
   package="com.example.luffy">
   <uses-permission android:name="android.permission.INTERNET" />
   <application
-        android:label="Luffy"
+    android:label="Luffy"
     android:name="${applicationName}"
     android:icon="@mipmap/ic_launcher"
     android:roundIcon="@mipmap/ic_launcher_round">
     <activity
       android:name=".MainActivity"
+      android:supportsPictureInPicture="true"
       android:exported="true"
       android:launchMode="singleTop"
       android:theme="@style/LaunchTheme"

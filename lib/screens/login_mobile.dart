@@ -3,9 +3,9 @@ import "dart:math";
 
 import "package:flutter/material.dart";
 import "package:flutter_inappwebview/flutter_inappwebview.dart";
-import "package:flutter_secure_storage/flutter_secure_storage.dart";
 import "package:http/http.dart" as http;
 import "package:luffy/auth.dart";
+import "package:luffy/main.dart";
 import "package:luffy/util.dart";
 
 const malRedirectUri = "https://localhost/authorize";
@@ -108,23 +108,17 @@ class _LoginMobileScreenState extends State<LoginMobileScreen> {
 
     prints(json);
 
-    const encryptedStorage = FlutterSecureStorage();
-
-    await encryptedStorage.write(
-      key: "access_token",
-      value: json["access_token"],
-    );
-    await encryptedStorage.write(
-      key: "refresh_token",
-      value: json["refresh_token"],
-    );
-    await encryptedStorage.write(
-      key: "expiration_time",
-      value: (DateTime.now().millisecondsSinceEpoch + json["expires_in"] * 1000)
-          .toString(),
+    final token = await MalToken.getInstance(
+      token: {
+        "access_token": json["access_token"],
+        "refresh_token": json["refresh_token"],
+        "expiration_time":
+            DateTime.now().millisecondsSinceEpoch + json["expires_in"] * 1000,
+      },
     );
 
     if (context.mounted) {
+      MyApp.of(context)!.setToken(token);
       Navigator.pushReplacementNamed(context, "/home");
     }
   }

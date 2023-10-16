@@ -6,11 +6,13 @@ class Scrollable<T> extends StatelessWidget {
     required this.items,
     required this.title,
     required this.builder,
+    this.spaceBetween = 8,
   });
 
   final List<T> items;
   final String title;
   final Widget Function(BuildContext, int) builder;
+  final double spaceBetween;
 
   @override
   Widget build(BuildContext context) {
@@ -26,10 +28,11 @@ class Scrollable<T> extends StatelessWidget {
         const SizedBox(height: 8),
         SizedBox(
           height: 200,
-          child: ListView.builder(
+          child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: items.length,
             itemBuilder: builder,
+            separatorBuilder: (_, __) => SizedBox(width: spaceBetween),
           ),
         )
       ],

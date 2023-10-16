@@ -1,158 +1,104 @@
-
 import "dart:core";
 import "dart:math";
 
-import "package:luffy/util.dart";
+class Unbaser {
+  Unbaser(this.base)
+      : selector = (base > 62)
+            ? 95
+            : (base > 54)
+                ? 62
+                : (base > 52)
+                    ? 54
+                    : 52,
+        alphabet = {
+          52: "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOP",
+          54: "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQR",
+          62: "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
+          95: " !\"#\$%&\\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
+        };
 
-class JsUnpacker {
-  JsUnpacker(String? packedJS) {
-    _packedJS = packedJS;
-  }
+  final int base;
+  final int selector;
+  final Map<int, String> alphabet;
 
-  String? _packedJS;
-
-  bool detect() {
-    final js = _packedJS?.replaceAll(" ", "");
-    final p = RegExp(r"eval\(function\(p,a,c,k,e,[rd]");
-    return p.hasMatch(js ?? "");
-  }
-
-  String? unpack() {
-    final js = _packedJS;
-
-    if (js == null) {
-      return null;
+  int unbase(String value) {
+    if (base >= 2 && base <= 36) {
+      return int.tryParse(value, radix: base) ?? 0;
     }
 
-    try {
-      final p = RegExp(
-        r"\}\s*\('(.*)',\s*(.*?),\s*(\d+),\s*'(.*?)'\.split\('\|'\)",
-        dotAll: true,
-      );
+    final dict = alphabet[selector]?.split("").asMap();
 
-      final matches = p.allMatches(js);
+    var returnVal = 0;
+    final valArray = value.split("").reversed.toList();
 
-      for (final match in matches) {
-        if (match.groupCount != 4) {
-          continue;
-        }
-
-        var payload = match.group(1)!.replaceAll(r"\'", "'");
-        final radixStr = match.group(2)!;
-        final countStr = match.group(3)!;
-        final symtab = match.group(4)!.split(RegExp(r"\|"));
-        final radix = int.tryParse(radixStr) ?? 36;
-        final count = int.tryParse(countStr) ?? 0;
-
-        if (symtab.length != count) {
-          throw Exception("Unknown p.a.c.k.e.r. encoding");
-        }
-
-        final unbase = Unbase(radix);
-        final matches2 = RegExp(r"\b\w+\b").allMatches(payload);
-        int replaceOffset = 0;
-
-        for (final match2 in matches2) {
-          final word = match2.group(0)!;
-          final x = unbase.unbase(word);
-
-          String? value;
-
-          if (x < symtab.length && x >= 0) {
-            value = symtab[x];
-          }
-
-          if (value != null && value.isNotEmpty) {
-            final start = match2.start + replaceOffset;
-            final end = match2.end + replaceOffset;
-
-            payload = payload.replaceRange(
-              start,
-              end,
-              value,
-            );
-
-            replaceOffset += value.length - word.length;
-          }
-        }
-
-        return payload;
-      }
-    } catch (e) {
-      logError(e);
+    for (int i = 0; i < valArray.length; i++) {
+      final cipher = valArray[i];
+      final cipherIndex = (dict?[cipher] ?? 0) as int;
+      returnVal += (pow(base, i) * cipherIndex).toInt();
     }
 
-    return null;
-  }
-
-  void logError(dynamic e) {
-    prints("JsUnpacker error: $e");
+    return returnVal;
   }
 }
 
-class Unbase {
-  Unbase(int radix) : _radix = radix {
-    if (radix <= 36) {
+class JsUnpacker {
+  static bool detect(String str) => packedRegex.hasMatch(str);
+
+  static final RegExp packedRegex = RegExp(
+    r"eval[(]function[(]p,a,c,k,e,[r|d]?",
+    caseSensitive: false,
+    multiLine: true,
+  );
+
+  /// Regex to get and group the packed javascript.
+  /// Needed to get information and unpack the code.
+  static final RegExp packedExtractRegex = RegExp(
+    r"[}][(]'(.*)', *(\\d+), *(\\d+), *'(.*?)'[.]split[(]'[|]'[)]",
+    caseSensitive: false,
+    multiLine: true,
+  );
+
+  /// Matches function names and variables to de-obfuscate the code.
+  static final RegExp unpackReplaceRegex =
+      RegExp(r"\\b\\w+\\b", caseSensitive: false, multiLine: true);
+
+  static Iterable<String> unpacking(String scriptBlock) sync* {
+    final unpacked = packedExtractRegex.allMatches(scriptBlock).map((result) {
+      final payload = result.group(1);
+      final symtab = result.group(4)?.split("|");
+      final radix = int.tryParse(result.group(2) ?? "") ?? 10;
+      final count = int.tryParse(result.group(3) ?? "");
+      final unbaser = Unbaser(radix);
+
+      if (symtab == null || count == null || symtab.length != count) {
+        return null;
+      }
+
+      return payload?.replaceAllMapped(unpackReplaceRegex, (match) {
+        final word = match.group(0) ?? "";
+        final unbased = symtab[unbaser.unbase(word)];
+        return unbased.isEmpty ? word : unbased;
+      });
+    });
+
+    yield* unpacked.whereType<String>();
+  }
+
+  static Iterable<String> unpack(String scriptBlock) sync* {
+    if (!detect(scriptBlock)) {
       return;
     }
 
-    if (radix < 62) {
-      _alphabet = alphabet62.substring(0, radix);
-    } else if (radix >= 63 && radix <= 94) {
-      _alphabet = alphabet95.substring(0, radix);
-    } else if (radix == 62) {
-      _alphabet = alphabet62;
-    } else if (radix == 95) {
-      _alphabet = alphabet95;
-    }
-
-    _dictionary = <String, int>{};
-
-    for (int i = 0; i < _alphabet!.length; i++) {
-      _dictionary![_alphabet!.substring(i, i + 1)] = i;
-    }
+    yield* unpacking(scriptBlock);
   }
 
-  static const alphabet62 =
-      "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-  static const alphabet95 =
-      " !\"#\$%&\\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
+  static String? unpackAndCombine(String scriptBlock) {
+    final unpacked = unpack(scriptBlock);
 
-  String? _alphabet;
-  late Map<String, int>? _dictionary;
-  final int _radix;
-
-  int unbase(String str) {
-    if (_alphabet == null) {
-      return int.parse(str, radix: _radix);
+    if (unpacked.isEmpty) {
+      return null;
     }
 
-    final tmp = str.split("").reversed.join();
-
-    int ret = 0;
-
-    int multiplyToInt32Max(int a, int b) {
-      const int32MaxValue = 2147483647;
-
-      return (a * b).clamp(-int32MaxValue - 1, int32MaxValue);
-    }
-
-    for (int i = 0; i < tmp.length; i++) {
-      final powResult = pow(_radix, i).toInt();
-      final dictResult = _dictionary![tmp.substring(i, i + 1)]!;
-      final multiplyResult = multiplyToInt32Max(powResult, dictResult);
-
-      ret += multiplyResult;
-    }
-
-    return ret;
+    return unpacked.join(" ");
   }
-}
-
-final _packedRegex = RegExp(r"eval\(function\(p,a,c,k,e,.*\)\)");
-
-List<String?> getAndUnpack(String str) {
-  final matches = _packedRegex.allMatches(str);
-
-  return matches.map((e) => JsUnpacker(e.group(0)).unpack()).toList();
 }

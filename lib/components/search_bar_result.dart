@@ -25,12 +25,13 @@ class SearchResultComponent extends StatelessWidget {
             context,
             MaterialPageRoute(
               builder: (context) => DetailsScreen(
-                // TODO: DetailsScreen should be notified when the ID is not from MAL.
                 animeId: anime.id,
                 malId: anime.malId,
+                title: anime.titleUserPreferred,
                 imageUrl: anime.coverImage,
                 bannerImageUrl: anime.bannerImage,
-                title: anime.titleUserPreferred,
+                titleRomaji: anime.titleRomaji,
+                totalEpisodes: anime.episodes,
               ),
             ),
           );

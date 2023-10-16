@@ -12,13 +12,12 @@ class CharacterCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
+    return SizedBox(
+      width: 120,
       child: Column(
         children: [
-          SizedBox(
-            height: 150,
-            width: 150,
+          Flexible(
+            flex: 10,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: CachedNetworkImage(
@@ -27,6 +26,7 @@ class CharacterCard extends StatelessWidget {
                   Icons.error,
                   color: Colors.red,
                 ),
+                fit: BoxFit.cover,
               ),
             ),
           ),
@@ -48,6 +48,7 @@ class CharacterCard extends StatelessWidget {
               style: TextStyle(
                 fontStyle: FontStyle.italic,
                 color: Theme.of(context).colorScheme.primary,
+                fontSize: 12,
               ),
             ),
           )

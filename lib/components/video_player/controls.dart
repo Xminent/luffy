@@ -523,7 +523,7 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
                         child: Column(
                           children: [
                             Text(
-                              "${widget.sourceName} source ${widget.episodeNum} - ${widget.size.width.round()}x${widget.size.height.round()}",
+                              "${widget.sourceName} source ${widget.episodeNum + 1} - ${widget.size.width.round()}x${widget.size.height.round()}",
                               style: const TextStyle(
                                 color: Colors.white,
                               ),

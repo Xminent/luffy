@@ -10,6 +10,7 @@ import "package:luffy/util.dart";
 
 const _mainUrl = "https://animepahe.ru";
 final _cookieJar = CookieJar();
+final _headers = {"referer": "$_mainUrl/"};
 
 Future<bool> _generateSession() async {
   final uri = Uri.parse(_mainUrl);
@@ -195,15 +196,15 @@ class LinkLoadData {
 
     final url =
         "$mainUrl/api?m=release&id=$session&sort=episode_asc&page=$page";
-    final response = await http.get(Uri.parse(url));
+    final res = await http.get(Uri.parse(url));
 
-    if (response.statusCode != 200) {
+    if (res.statusCode != 200) {
       return null;
     }
 
-    final jsonResponse = jsonDecode(response.body);
-    final episode = jsonResponse["data"]
-        .firstWhere((e) => e["episode"] == episodeNum)["session"];
+    final data = jsonDecode(res.body);
+    final episode =
+        data["data"].firstWhere((e) => e["episode"] == episodeNum)["session"];
 
     return "$mainUrl/play/$session/$episode";
   }
@@ -226,9 +227,7 @@ Future<List<Episode>> generateListOfEpisodes(String session) async {
       Uri.parse(
         "$_mainUrl/api?m=release&id=$session&sort=episode_asc&page=1",
       ),
-      headers: {
-        "referer": "$_mainUrl/",
-      },
+      headers: _headers,
     );
 
     final data = AnimePaheAnimeData.fromJson(jsonDecode(res.body));
@@ -239,15 +238,11 @@ Future<List<Episode>> generateListOfEpisodes(String session) async {
     var ep = 1;
     final episodes = <Episode>[];
 
-    String getEpisodeTitle(AnimeData a) {
-      return a.title.isEmpty ? "Episode ${a.episode}" : a.title;
-    }
-
     if (lastPage == 1 && perPage > total) {
       for (final it in data.data) {
         episodes.add(
           Episode(
-            title: getEpisodeTitle(it),
+            title: it.title.isEmpty ? "Episode ${it.episode}" : it.title,
             url: jsonEncode(
               LinkLoadData(
                 mainUrl: _mainUrl,
@@ -299,38 +294,64 @@ Future<List<Episode>> generateListOfEpisodes(String session) async {
   }
 }
 
-Future<String?> getStreamUrlFromKwik(String? url) async {
-  if (url == null) {
-    return null;
-  }
+// Future<String?> _getStreamUrlFromKwik(String? url) async {
+//   if (url == null) {
+//     return null;
+//   }
 
+//   try {
+//     final req = await HttpClient().openUrl(
+//       "GET",
+//       Uri.parse(url),
+//     );
+
+//     req.cookies.addAll(await _cookieJar.loadForRequest(Uri.parse(_mainUrl)));
+//     req.headers.add("Connection", "keep-alive");
+//     req.headers.add("referer", "$_mainUrl/");
+
+//     final res = await req.close();
+//     final body = await res.transform(utf8.decoder).join();
+//     final unpacked = JsUnpacker.unpackAndComb(body);
+
+//     for (final it in unpacked) {
+//       final match = RegExp(r"source=\'(.*?)\'").firstMatch(it ?? "")?.group(1);
+
+//       if (match != null) {
+//         return match;
+//       }
+//     }
+
+//     return null;
+//   } catch (e) {
+//     prints("Failed to get stream url from kwik $e");
+//     return null;
+//   }
+// }
+
+Future<String?> _getHlsStreamUrl(Uri kwikUrl, String referer) async {
   try {
-    final req = await HttpClient().openUrl(
-      "GET",
-      Uri.parse(url),
+    final res = await http.get(
+      kwikUrl,
+      headers: {
+        "referer": referer,
+      },
     );
+    final document = parse(res.body);
+    final script = document
+        .querySelectorAll("script")
+        .where((e) => e.text.contains("eval"))
+        .first
+        .text
+        .substringAfter("eval(function(");
+    final unpacked = JsUnpacker.unpackAndCombine("eval(function($script");
+    final ret =
+        unpacked?.substringAfter(r"const source=\'").substringBefore(r"\';");
 
-    req.cookies.addAll(await _cookieJar.loadForRequest(Uri.parse(_mainUrl)));
-    req.headers.add("Connection", "keep-alive");
-    req.headers.add("referer", "$_mainUrl/");
-
-    final res = await req.close();
-    final body = await res.transform(utf8.decoder).join();
-    final unpacked = getAndUnpack(body);
-
-    for (final it in unpacked) {
-      final match = RegExp(r"source=\'(.*?)\'").firstMatch(it ?? "")?.group(1);
-
-      if (match != null) {
-        return match;
-      }
-    }
-
-    return null;
+    return ret;
   } catch (e) {
     prints("Failed to get stream url from kwik $e");
-    return null;
   }
+  return null;
 }
 
 class AnimePahe {
@@ -338,9 +359,7 @@ class AnimePahe {
     try {
       final res = await http.get(
         Uri.parse("$_mainUrl/api?m=search&l=8&q=$query"),
-        headers: {
-          "referer": "$_mainUrl/",
-        },
+        headers: _headers,
       );
 
       final data = AnimePaheSearch.fromJson(jsonDecode(res.body));
@@ -446,34 +465,48 @@ class AnimePahe {
 
   static Future<List<String>> extractVideoLinks(Episode episode) async {
     final data = LinkLoadData.fromJson(jsonDecode(episode.url));
-    final headers = {
-      "referer": "$_mainUrl/",
-    };
     final episodeUrl = await data.getUrl();
+    final ret = <String>[];
 
     if (episodeUrl == null) {
-      return [];
+      return ret;
     }
 
     try {
       final res = await http.get(
         Uri.parse(episodeUrl),
-        headers: headers,
+        headers: _headers,
       );
 
-      final urlRegex = RegExp(r'let url = "(.*?)";');
-      final embed = urlRegex.firstMatch(res.body)?.group(1);
+      final document = parse(res.body);
+      final downloadLinks = document.querySelectorAll("div#pickDownload > a");
+      final buttons = document.querySelectorAll("div#resolutionMenu > button");
 
-      if (embed == null) {
-        return [];
+      for (var i = 0; i < downloadLinks.length; i++) {
+        final btn = buttons[i];
+        final kwikLink = btn.attributes["data-src"];
+
+        if (kwikLink == null) {
+          continue;
+        }
+
+        // final quality = btn.text;
+        // final paheWinLink = downloadLinks[i].attributes["href"];
+        final streamUrl = await _getHlsStreamUrl(Uri.parse(kwikLink), _mainUrl);
+
+        if (streamUrl == null) {
+          continue;
+        }
+
+        ret.add(
+          streamUrl,
+        );
       }
-
-      final url = await getStreamUrlFromKwik(embed);
-
-      return [url ?? ""];
     } catch (e) {
-      return [];
+      prints("Failed to extract video links: $e");
     }
+
+    return ret;
   }
 }
 

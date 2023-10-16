@@ -16,7 +16,7 @@ String? _makeYoutubeUrl(Map<String, dynamic>? json) {
   final id = json["id"];
 
   return site == "youtube" && id != null
-      ? "https://www.youtube.com/watch?v=$id"
+      ? "https://www.youtube.com/embed/$id"
       : null;
 }
 
@@ -91,7 +91,7 @@ class AnimeInfo {
   final String siteUrl;
   final int malId;
   final NextAiringEpisode? nextAiringEpisode;
-  final String source;
+  final String? source;
   final String countryOfOrigin;
   final String format;
   final int? duration;
@@ -242,7 +242,9 @@ class SearchResult {
         type = json["type"],
         genres =
             json.containsKey("genres") ? List<String>.from(json["genres"]) : [],
-        meanScore = json["meanScore"],
+        meanScore = json["meanScore"] != null
+            ? json["meanScore"].toDouble() / 10
+            : null,
         isFavorite = json["isFavourite"],
         format = json["format"],
         bannerImage = json["bannerImage"],
@@ -260,7 +262,7 @@ class SearchResult {
   final int? nextAiringEpisode;
   final String type;
   final List<String> genres;
-  final int? meanScore;
+  final double? meanScore;
   final bool isFavorite;
   final String? format;
   final String? bannerImage;
@@ -310,7 +312,7 @@ class AnilistService {
   static Future<List<SearchResult>> search(String query) async {
     final params = {
       "query":
-          r"query ($page: Int = 1, $id: Int, $type: MediaType, $isAdult: Boolean = false, $search: String, $format: [MediaFormat], $status: MediaStatus, $countryOfOrigin: CountryCode, $source: MediaSource, $season: MediaSeason, $seasonYear: Int, $year: String, $onList: Boolean, $yearLesser: FuzzyDateInt, $yearGreater: FuzzyDateInt, $episodeLesser: Int, $episodeGreater: Int, $durationLesser: Int, $durationGreater: Int, $chapterLesser: Int, $chapterGreater: Int, $volumeLesser: Int, $volumeGreater: Int, $licensedBy: [String], $isLicensed: Boolean, $genres: [String], $excludedGenres: [String], $tags: [String], $excludedTags: [String], $minimumTagRank: Int, $sort: [MediaSort] = [POPULARITY_DESC, SCORE_DESC]) { Page(page: $page, perPage: 50) { pageInfo { total perPage currentPage lastPage hasNextPage } media(id: $id, type: $type, season: $season, format_in: $format, status: $status, countryOfOrigin: $countryOfOrigin, source: $source, search: $search, onList: $onList, seasonYear: $seasonYear, startDate_like: $year, startDate_lesser: $yearLesser, startDate_greater: $yearGreater, episodes_lesser: $episodeLesser, episodes_greater: $episodeGreater, duration_lesser: $durationLesser, duration_greater: $durationGreater, chapters_lesser: $chapterLesser, chapters_greater: $chapterGreater, volumes_lesser: $volumeLesser, volumes_greater: $volumeGreater, licensedBy_in: $licensedBy, isLicensed: $isLicensed, genre_in: $genres, genre_not_in: $excludedGenres, tag_in: $tags, tag_not_in: $excludedTags, minimumTagRank: $minimumTagRank, sort: $sort, isAdult: $isAdult) { id idMal isAdult status chapters episodes nextAiringEpisode { episode } type genres meanScore isFavourite format bannerImage coverImage { large extraLarge } title { english romaji userPreferred } mediaListEntry { progress private score(format: POINT_100) status } } } }",
+          r"query($page:Int=1,$id:Int,$type:MediaType,$isAdult:Boolean=false,$search:String,$format:[MediaFormat],$status:MediaStatus,$countryOfOrigin:CountryCode,$source:MediaSource,$season:MediaSeason,$seasonYear:Int,$year:String,$onList:Boolean,$yearLesser:FuzzyDateInt,$yearGreater:FuzzyDateInt,$episodeLesser:Int,$episodeGreater:Int,$durationLesser:Int,$durationGreater:Int,$chapterLesser:Int,$chapterGreater:Int,$volumeLesser:Int,$volumeGreater:Int,$licensedBy:[String],$isLicensed:Boolean,$genres:[String],$excludedGenres:[String],$tags:[String],$excludedTags:[String],$minimumTagRank:Int,$sort:[MediaSort]=[POPULARITY_DESC,SCORE_DESC]){Page(page:$page,perPage:50){pageInfo{total perPage currentPage lastPage hasNextPage}media(id:$id,type:$type,season:$season,format_in:$format,status:$status,countryOfOrigin:$countryOfOrigin,source:$source,search:$search,onList:$onList,seasonYear:$seasonYear,startDate_like:$year,startDate_lesser:$yearLesser,startDate_greater:$yearGreater,episodes_lesser:$episodeLesser,episodes_greater:$episodeGreater,duration_lesser:$durationLesser,duration_greater:$durationGreater,chapters_lesser:$chapterLesser,chapters_greater:$chapterGreater,volumes_lesser:$volumeLesser,volumes_greater:$volumeGreater,licensedBy_in:$licensedBy,isLicensed:$isLicensed,genre_in:$genres,genre_not_in:$excludedGenres,tag_in:$tags,tag_not_in:$excludedTags,minimumTagRank:$minimumTagRank,sort:$sort,isAdult:$isAdult){id idMal isAdult status chapters episodes nextAiringEpisode{episode}type genres meanScore isFavourite format bannerImage coverImage{large extraLarge}title{english romaji userPreferred}mediaListEntry{progress private score(format:POINT_100)status}}}}",
       "variables":
           '{"type":"ANIME","isAdult":false,"page":"1","search":"$query" }'
     };
@@ -329,6 +331,10 @@ class AnilistService {
       final ret = <SearchResult>[];
 
       for (final item in data) {
+        if (item["media"]?["countryOfOrigin"] == "CN") {
+          continue;
+        }
+
         ret.add(SearchResult.fromJson(item));
       }
 
@@ -344,7 +350,7 @@ class AnilistService {
   }) async {
     final params = {
       "query":
-          "{Media(${isMalId ? "idMal" : "id"}:$id){id mediaListEntry{id status score(format:POINT_100) progress private notes repeat customLists updatedAt startedAt{year month day}completedAt{year month day}}isFavourite siteUrl idMal nextAiringEpisode{episode airingAt}source countryOfOrigin format duration season seasonYear startDate{year month day}endDate{year month day}genres studios(isMain:true){nodes{id name siteUrl}}description trailer { site id } synonyms tags { name rank isMediaSpoiler } characters(sort:[ROLE,FAVOURITES_DESC],perPage:25,page:1){edges{role node{id image{medium}name{userPreferred}}}}relations{edges{relationType(version:2)node{id idMal mediaListEntry{progress private score(format:POINT_100) status} episodes chapters nextAiringEpisode{episode} popularity meanScore isAdult isFavourite format title{english romaji userPreferred}type status(version:2)bannerImage coverImage{large}}}}staffPreview: staff(perPage: 8, sort: [RELEVANCE, ID]) {edges{role node{id name{userPreferred}}}}recommendations(sort:RATING_DESC){nodes{mediaRecommendation{id idMal mediaListEntry{progress private score(format:POINT_100) status} episodes chapters nextAiringEpisode{episode}meanScore isAdult isFavourite format title{english romaji userPreferred}type status(version:2)bannerImage coverImage{large}}}}externalLinks{url site}}}",
+          "{Media(${isMalId ? "idMal" : "id"}:$id){id mediaListEntry{id status score(format:POINT_100)progress private notes repeat customLists updatedAt startedAt{year month day}completedAt{year month day}}isFavourite siteUrl idMal nextAiringEpisode{episode airingAt}source countryOfOrigin format duration season seasonYear startDate{year month day}endDate{year month day}genres studios(isMain:true){nodes{id name siteUrl}}description trailer{site id}synonyms tags{name rank isMediaSpoiler}characters(sort:[ROLE,FAVOURITES_DESC],perPage:25,page:1){edges{role node{id image{medium}name{userPreferred}}}}relations{edges{relationType(version:2)node{id idMal mediaListEntry{progress private score(format:POINT_100)status}episodes chapters nextAiringEpisode{episode}popularity meanScore isAdult isFavourite format title{english romaji userPreferred}type status(version:2)bannerImage coverImage{large}}}}staffPreview:staff(perPage:8,sort:[RELEVANCE,ID]){edges{role node{id name{userPreferred}}}}recommendations(sort:RATING_DESC){nodes{mediaRecommendation{id idMal mediaListEntry{progress private score(format:POINT_100)status}episodes chapters nextAiringEpisode{episode}meanScore isAdult isFavourite format title{english romaji userPreferred}type status(version:2)bannerImage coverImage{large}}}}externalLinks{url site}}}",
     };
 
     final res = await http.post(
@@ -360,7 +366,7 @@ class AnilistService {
   static Future<List<SearchResult>> discover() async {
     final params = {
       "query":
-          r"query ($page: Int = 1, $id: Int, $type: MediaType, $isAdult: Boolean = false, $search: String, $format: [MediaFormat], $status: MediaStatus, $countryOfOrigin: CountryCode, $source: MediaSource, $season: MediaSeason, $seasonYear: Int, $year: String, $onList: Boolean, $yearLesser: FuzzyDateInt, $yearGreater: FuzzyDateInt, $episodeLesser: Int, $episodeGreater: Int, $durationLesser: Int, $durationGreater: Int, $chapterLesser: Int, $chapterGreater: Int, $volumeLesser: Int, $volumeGreater: Int, $licensedBy: [String], $isLicensed: Boolean, $genres: [String], $excludedGenres: [String], $tags: [String], $excludedTags: [String], $minimumTagRank: Int, $sort: [MediaSort] = [POPULARITY_DESC, SCORE_DESC]) { Page(page: $page, perPage: 12) { pageInfo { total perPage currentPage lastPage hasNextPage } media(id: $id, type: $type, season: $season, format_in: $format, status: $status, countryOfOrigin: $countryOfOrigin, source: $source, search: $search, onList: $onList, seasonYear: $seasonYear, startDate_like: $year, startDate_lesser: $yearLesser, startDate_greater: $yearGreater, episodes_lesser: $episodeLesser, episodes_greater: $episodeGreater, duration_lesser: $durationLesser, duration_greater: $durationGreater, chapters_lesser: $chapterLesser, chapters_greater: $chapterGreater, volumes_lesser: $volumeLesser, volumes_greater: $volumeGreater, licensedBy_in: $licensedBy, isLicensed: $isLicensed, genre_in: $genres, genre_not_in: $excludedGenres, tag_in: $tags, tag_not_in: $excludedTags, minimumTagRank: $minimumTagRank, sort: $sort, isAdult: $isAdult) { id idMal isAdult status chapters episodes nextAiringEpisode { episode } type genres meanScore isFavourite format bannerImage coverImage { large extraLarge } title { english romaji userPreferred } mediaListEntry { progress private score(format: POINT_100) status } } } } ",
+          r"query($page:Int=1,$id:Int,$type:MediaType,$isAdult:Boolean=false,$search:String,$format:[MediaFormat],$status:MediaStatus,$countryOfOrigin:CountryCode,$source:MediaSource,$season:MediaSeason,$seasonYear:Int,$year:String,$onList:Boolean,$yearLesser:FuzzyDateInt,$yearGreater:FuzzyDateInt,$episodeLesser:Int,$episodeGreater:Int,$durationLesser:Int,$durationGreater:Int,$chapterLesser:Int,$chapterGreater:Int,$volumeLesser:Int,$volumeGreater:Int,$licensedBy:[String],$isLicensed:Boolean,$genres:[String],$excludedGenres:[String],$tags:[String],$excludedTags:[String],$minimumTagRank:Int,$sort:[MediaSort]=[POPULARITY_DESC,SCORE_DESC]){Page(page:$page,perPage:12){pageInfo{total perPage currentPage lastPage hasNextPage}media(id:$id,type:$type,season:$season,format_in:$format,status:$status,countryOfOrigin:$countryOfOrigin,source:$source,search:$search,onList:$onList,seasonYear:$seasonYear,startDate_like:$year,startDate_lesser:$yearLesser,startDate_greater:$yearGreater,episodes_lesser:$episodeLesser,episodes_greater:$episodeGreater,duration_lesser:$durationLesser,duration_greater:$durationGreater,chapters_lesser:$chapterLesser,chapters_greater:$chapterGreater,volumes_lesser:$volumeLesser,volumes_greater:$volumeGreater,licensedBy_in:$licensedBy,isLicensed:$isLicensed,genre_in:$genres,genre_not_in:$excludedGenres,tag_in:$tags,tag_not_in:$excludedTags,minimumTagRank:$minimumTagRank,sort:$sort,isAdult:$isAdult){id idMal isAdult status chapters episodes nextAiringEpisode{episode}type genres meanScore isFavourite format bannerImage coverImage{large extraLarge}title{english romaji userPreferred}mediaListEntry{progress private score(format:POINT_100)status}}}}",
       "variables":
           '{"type":"ANIME","isAdult":false,"seasonYear":"2023" ,"season":"SUMMER","sort":"TRENDING_DESC"}'
     };
@@ -379,6 +385,10 @@ class AnilistService {
       final ret = <SearchResult>[];
 
       for (final item in data) {
+        if (item["media"]?["countryOfOrigin"] == "CN") {
+          continue;
+        }
+
         ret.add(SearchResult.fromJson(item));
       }
 
@@ -394,7 +404,7 @@ class AnilistService {
 
     final params = {
       "query":
-          "{ Page(page:1,perPage:50) { pageInfo { hasNextPage total } airingSchedules( airingAt_greater: 0 airingAt_lesser: $now sort:TIME_DESC ) { episode airingAt media { id idMal status chapters episodes nextAiringEpisode { episode } isAdult type meanScore isFavourite format bannerImage countryOfOrigin coverImage { large } title { english romaji userPreferred } mediaListEntry { progress private score(format: POINT_100) status } } } } }",
+          "{Page(page:1,perPage:50){pageInfo{hasNextPage total}airingSchedules(airingAt_greater:0 airingAt_lesser:$now sort:TIME_DESC){episode airingAt media{id idMal status chapters episodes nextAiringEpisode{episode}isAdult type meanScore isFavourite format bannerImage countryOfOrigin coverImage{large}title{english romaji userPreferred}mediaListEntry{progress private score(format:POINT_100)status}}}}}",
       "variables": ""
     };
 
@@ -407,7 +417,13 @@ class AnilistService {
       final ret = <SearchResult>[];
 
       for (final item in data["airingSchedules"]) {
-        ret.add(SearchResult.fromJson(item["media"]));
+        final media = item["media"];
+
+        if (media?["countryOfOrigin"] == "CN" || media?["isAdult"]) {
+          continue;
+        }
+
+        ret.add(SearchResult.fromJson(media));
       }
 
       return ret;
@@ -420,8 +436,8 @@ class AnilistService {
   static Future<List<SearchResult>> popular() async {
     final params = {
       "query":
-          r"query ($page: Int = 1, $id: Int, $type: MediaType, $isAdult: Boolean = false, $search: String, $format: [MediaFormat], $status: MediaStatus, $countryOfOrigin: CountryCode, $source: MediaSource, $season: MediaSeason, $seasonYear: Int, $year: String, $onList: Boolean, $yearLesser: FuzzyDateInt, $yearGreater: FuzzyDateInt, $episodeLesser: Int, $episodeGreater: Int, $durationLesser: Int, $durationGreater: Int, $chapterLesser: Int, $chapterGreater: Int, $volumeLesser: Int, $volumeGreater: Int, $licensedBy: [String], $isLicensed: Boolean, $genres: [String], $excludedGenres: [String], $tags: [String], $excludedTags: [String], $minimumTagRank: Int, $sort: [MediaSort] = [POPULARITY_DESC, SCORE_DESC]) { Page(page: $page, perPage: 50) { pageInfo { total perPage currentPage lastPage hasNextPage } media(id: $id, type: $type, season: $season, format_in: $format, status: $status, countryOfOrigin: $countryOfOrigin, source: $source, search: $search, onList: $onList, seasonYear: $seasonYear, startDate_like: $year, startDate_lesser: $yearLesser, startDate_greater: $yearGreater, episodes_lesser: $episodeLesser, episodes_greater: $episodeGreater, duration_lesser: $durationLesser, duration_greater: $durationGreater, chapters_lesser: $chapterLesser, chapters_greater: $chapterGreater, volumes_lesser: $volumeLesser, volumes_greater: $volumeGreater, licensedBy_in: $licensedBy, isLicensed: $isLicensed, genre_in: $genres, genre_not_in: $excludedGenres, tag_in: $tags, tag_not_in: $excludedTags, minimumTagRank: $minimumTagRank, sort: $sort, isAdult: $isAdult) { id idMal isAdult status chapters episodes nextAiringEpisode { episode } type genres meanScore isFavourite format bannerImage coverImage { large extraLarge } title { english romaji userPreferred } mediaListEntry { progress private score(format: POINT_100) status } } } } ",
-      "variables": '{"type":"ANIME","isAdult":false ,"sort":"POPULARITY_DESC"}'
+          r"query($page:Int=1,$id:Int,$type:MediaType,$isAdult:Boolean=false,$search:String,$format:[MediaFormat],$status:MediaStatus,$countryOfOrigin:CountryCode,$source:MediaSource,$season:MediaSeason,$seasonYear:Int,$year:String,$onList:Boolean,$yearLesser:FuzzyDateInt,$yearGreater:FuzzyDateInt,$episodeLesser:Int,$episodeGreater:Int,$durationLesser:Int,$durationGreater:Int,$chapterLesser:Int,$chapterGreater:Int,$volumeLesser:Int,$volumeGreater:Int,$licensedBy:[String],$isLicensed:Boolean,$genres:[String],$excludedGenres:[String],$tags:[String],$excludedTags:[String],$minimumTagRank:Int,$sort:[MediaSort]=[POPULARITY_DESC,SCORE_DESC]){Page(page:$page,perPage:50){pageInfo{total perPage currentPage lastPage hasNextPage}media(id:$id,type:$type,season:$season,format_in:$format,status:$status,countryOfOrigin:$countryOfOrigin,source:$source,search:$search,onList:$onList,seasonYear:$seasonYear,startDate_like:$year,startDate_lesser:$yearLesser,startDate_greater:$yearGreater,episodes_lesser:$episodeLesser,episodes_greater:$episodeGreater,duration_lesser:$durationLesser,duration_greater:$durationGreater,chapters_lesser:$chapterLesser,chapters_greater:$chapterGreater,volumes_lesser:$volumeLesser,volumes_greater:$volumeGreater,licensedBy_in:$licensedBy,isLicensed:$isLicensed,genre_in:$genres,genre_not_in:$excludedGenres,tag_in:$tags,tag_not_in:$excludedTags,minimumTagRank:$minimumTagRank,sort:$sort,isAdult:$isAdult){id idMal isAdult status chapters episodes nextAiringEpisode{episode}type genres meanScore isFavourite format bannerImage coverImage{large extraLarge}title{english romaji userPreferred}mediaListEntry{progress private score(format:POINT_100)status}}}}",
+      "variables": '{"type":"ANIME","isAdult":false,"sort":"POPULARITY_DESC"}'
     };
 
     try {
@@ -433,6 +449,10 @@ class AnilistService {
       final ret = <SearchResult>[];
 
       for (final item in data) {
+        if (item["media"]?["countryOfOrigin"] == "CN") {
+          continue;
+        }
+
         ret.add(SearchResult.fromJson(item));
       }
 
@@ -449,12 +469,13 @@ class AnilistService {
 
     Map<String, dynamic> makeParams(int page) => {
           "query":
-              "{ Page(page:$page,perPage:50) { pageInfo { hasNextPage total } airingSchedules( airingAt_greater: $now airingAt_lesser: $future sort:TIME_DESC ) { episode airingAt media { id idMal status chapters episodes nextAiringEpisode { episode } isAdult type meanScore isFavourite format bannerImage countryOfOrigin coverImage { large } title { english romaji userPreferred } mediaListEntry { progress private score(format: POINT_100) status } } } } }",
+              "{Page(page:$page,perPage:50){pageInfo{hasNextPage total}airingSchedules(airingAt_greater:$now airingAt_lesser:$future sort:TIME_DESC){episode airingAt media{id idMal status chapters episodes nextAiringEpisode{episode}isAdult type meanScore isFavourite format bannerImage countryOfOrigin coverImage{large}title{english romaji userPreferred}mediaListEntry{progress private score(format:POINT_100)status}}}}}",
           "variables": ""
         };
 
     final ret = <WeeklySearchResult>[];
     int page = 1;
+    final seen = <int>{};
 
     try {
       var res = await http.post(
@@ -464,7 +485,18 @@ class AnilistService {
       var data = jsonDecode(res.body)["data"]["Page"];
 
       for (final item in data["airingSchedules"]) {
-        ret.add(WeeklySearchResult.fromJson(item));
+        if (item["media"]?["countryOfOrigin"] == "CN") {
+          continue;
+        }
+
+        final w = WeeklySearchResult.fromJson(item);
+
+        if (seen.contains(w.media.id)) {
+          continue;
+        }
+
+        ret.add(w);
+        seen.add(w.media.id);
       }
 
       while (data["pageInfo"]["hasNextPage"]) {
@@ -475,7 +507,18 @@ class AnilistService {
         data = jsonDecode(res.body)["data"]["Page"];
 
         for (final item in data["airingSchedules"]) {
-          ret.add(WeeklySearchResult.fromJson(item));
+          if (item["media"]?["countryOfOrigin"] == "CN") {
+            continue;
+          }
+
+          final w = WeeklySearchResult.fromJson(item);
+
+          if (seen.contains(w.media.id)) {
+            continue;
+          }
+
+          ret.add(w);
+          seen.add(w.media.id);
         }
       }
     } catch (e) {

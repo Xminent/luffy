@@ -2,9 +2,14 @@ import "dart:async";
 import "dart:convert";
 import "dart:math";
 
+import "package:color_log/color_log.dart";
 import "package:flutter/foundation.dart";
 
-dynamic tryJsonDecode(String s) {
+dynamic tryJsonDecode(String? s) {
+  if (s == null) {
+    return null;
+  }
+
   try {
     return jsonDecode(s);
   } catch (e) {
@@ -36,8 +41,7 @@ void prints(s1) {
     final m = match.group(0);
 
     if (m != null) {
-      // ignore: avoid_print
-      print(m);
+      clog.debug(m);
     }
   });
 }

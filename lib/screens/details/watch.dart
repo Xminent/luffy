@@ -43,7 +43,8 @@ class WatchScreen extends StatefulWidget {
   State<WatchScreen> createState() => _WatchScreenState();
 }
 
-class _WatchScreenState extends State<WatchScreen> {
+class _WatchScreenState extends State<WatchScreen>
+    with AutomaticKeepAliveClientMixin {
   late Future<_Data?> _dataFuture;
   AnimeExtractor _extractor = sources.first;
   int _extractorIndex = 0;
@@ -64,6 +65,10 @@ class _WatchScreenState extends State<WatchScreen> {
 
     final history =
         await HistoryService.getMedia("${_extractor.name}-${widget.animeId}");
+
+    prints(
+      "History for ${_extractor.name}-${widget.animeId}: ${history?.toJson()}",
+    );
 
     return _Data(
       anime: anime,
@@ -117,7 +122,7 @@ class _WatchScreenState extends State<WatchScreen> {
   }
 
   void _handleExtractorChanged(int? idx) {
-    if (idx == null) {
+    if (idx == null || idx == _extractorIndex) {
       return;
     }
 
@@ -170,7 +175,6 @@ class _WatchScreenState extends State<WatchScreen> {
   }
 
   List<Widget> _buildMalWatchButton(_Data data) {
-    // final watchedEpisodes = _watchedEpisodes ?? 0;
     final watchedEpisodes = widget.watchedEpisodes ?? 0;
     final proposedEpisode = watchedEpisodes + 1;
     final totalEpisodes = widget.totalEpisodes;
@@ -261,9 +265,10 @@ class _WatchScreenState extends State<WatchScreen> {
           showId: "${_extractor.name}-${widget.animeId}",
           showTitle: widget.title,
           episode: episode,
-          episodeNum: idx + 1,
+          episodeNum: idx,
           sourceName: _extractor.name,
           savedProgress: episodeProgress,
+          imageUrl: episode.thumbnailUrl ?? data.anime.imageUrl,
           episodes: data.episodes,
           sourceFetcher: (ep) => _extractor.getSources(ep),
           animeId: widget.animeId,
@@ -279,86 +284,99 @@ class _WatchScreenState extends State<WatchScreen> {
     }
   }
 
-  Widget _buildBody(_Data data) {
-    return EpisodeList(
-      episodes: data.episodes,
-      episodeInfo: data.info,
-      episodeInfoKitsu: data.moreInfo,
-      episodeProgress: data.progress,
-      watchedEpisodes: widget.watchedEpisodes ?? 0,
-      totalEpisodes: widget.totalEpisodes ?? 0,
-      onEpisodeSelected: (ep, idx) {
-        _handleEpisodeSelected(
-          ep,
-          idx,
-          data,
-        );
-      },
-    );
-  }
-
   @override
   void initState() {
     super.initState();
     _dataFuture = _getData(true);
   }
 
+  List<Widget> _buildDropdownButton() {
+    return [
+      DropdownButton(
+        value: _extractorIndex,
+        onChanged: _handleExtractorChanged,
+        items: sources
+            .asMap()
+            .entries
+            .map(
+              (e) => DropdownMenuItem(
+                value: e.key,
+                child: Text(e.value.name),
+              ),
+            )
+            .toList(),
+      ),
+      const SizedBox(height: 16),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
+    super.build(context);
+
     return SingleChildScrollView(
       child: Container(
-        color: Theme.of(context).colorScheme.background,
         padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            DropdownButton(
-              value: _extractorIndex,
-              onChanged: _handleExtractorChanged,
-              items: sources
-                  .asMap()
-                  .entries
-                  .map(
-                    (e) => DropdownMenuItem(
-                      value: e.key,
-                      child: Text(e.value.name),
-                    ),
-                  )
-                  .toList(),
-            ),
-            const SizedBox(height: 16),
-            // ..._buildResumeButton(animeInfo),
-            FutureBuilder(
-              future: _dataFuture,
-              builder: (context, snapshot) {
-                final data = snapshot.data;
+        child: FutureBuilder(
+          future: _dataFuture,
+          builder: (context, snapshot) {
+            final data = snapshot.data;
 
-                if (snapshot.connectionState == ConnectionState.none) {
-                  return SizedBox(
-                    height: MediaQuery.of(context).size.height,
-                  );
-                }
+            if (snapshot.connectionState == ConnectionState.none) {
+              return Column(
+                children: _buildDropdownButton(),
+              );
+            }
 
-                if (snapshot.connectionState != ConnectionState.done) {
-                  return SizedBox(
-                    height: MediaQuery.of(context).size.height,
-                    child: const Center(
-                      child: CircularProgressIndicator(),
-                    ),
-                  );
-                }
+            if (snapshot.connectionState != ConnectionState.done) {
+              return SizedBox(
+                height: MediaQuery.of(context).size.height,
+                child: Column(
+                  children: [
+                    ..._buildDropdownButton(),
+                    const SizedBox(height: 16),
+                    const CircularProgressIndicator(),
+                  ],
+                ),
+              );
+            }
 
-                if (data == null) {
-                  return const Center(
-                    child: Text("No results found"),
-                  );
-                }
+            if (data == null) {
+              return Column(
+                children: [
+                  ..._buildDropdownButton(),
+                  const SizedBox(height: 16),
+                  const Text("No results found"),
+                ],
+              );
+            }
 
-                return _buildBody(data);
-              },
-            )
-          ],
+            return Column(
+              children: [
+                ..._buildDropdownButton(),
+                EpisodeList(
+                  episodes: data.episodes,
+                  episodeInfo: data.info,
+                  episodeInfoKitsu: data.moreInfo,
+                  episodeProgress: data.progress,
+                  watchedEpisodes: widget.watchedEpisodes ?? 0,
+                  totalEpisodes: widget.totalEpisodes ?? 0,
+                  onEpisodeSelected: (ep, idx) {
+                    _handleEpisodeSelected(
+                      ep,
+                      idx,
+                      data,
+                    );
+                  },
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
   }
+
+  @override
+  bool get wantKeepAlive => true;
 }

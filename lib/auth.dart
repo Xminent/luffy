@@ -19,7 +19,9 @@ class MalToken {
         DateTime.now().millisecondsSinceEpoch < expirationTime;
   }
 
-  static Future<MalToken?> getInstance() async {
+  static Future<MalToken?> getInstance({
+    Map<String, dynamic>? token,
+  }) async {
     if (_instance == null) {
       const storage = FlutterSecureStorage();
 

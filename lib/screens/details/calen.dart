@@ -82,8 +82,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   }).toList(),
                 ),
               ),
-              body: Container(
-                color: Theme.of(context).colorScheme.background,
+              body: SizedBox(
                 height: MediaQuery.of(context).size.height,
                 child: TabBarView(
                   children: topAnimes.weekly.map((list) {
@@ -107,9 +106,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                 MaterialPageRoute(
                                   builder: (context) => DetailsScreen(
                                     animeId: anime.id,
+                                    malId: anime.malId,
                                     title: anime.titleUserPreferred,
                                     imageUrl: anime.coverImage,
                                     bannerImageUrl: anime.bannerImage,
+                                    titleRomaji: anime.titleRomaji,
+                                    totalEpisodes: anime.episodes,
                                   ),
                                 ),
                               );

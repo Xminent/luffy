@@ -8,16 +8,30 @@ class RelationCard extends StatelessWidget {
 
   final Relation relation;
 
+  Widget _buildTypeIcon(String mediaType) {
+    switch (mediaType.toLowerCase()) {
+      case "manga":
+        return const Icon(
+          Icons.menu_book,
+          size: 16,
+        );
+      default:
+        return const Icon(
+          Icons.movie_filter,
+          size: 16,
+        );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      child: Padding(
-        padding: const EdgeInsets.only(right: 8),
+      child: SizedBox(
+        width: 120,
         child: Column(
           children: [
-            SizedBox(
-              height: 150,
-              width: 150,
+            Flexible(
+              flex: 10,
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(8),
                 child: CachedNetworkImage(
@@ -30,8 +44,25 @@ class RelationCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            SizedBox(
-              width: 150,
+            Flexible(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildTypeIcon(relation.type),
+                  const SizedBox(width: 8),
+                  Text(
+                    relation.relationType,
+                    style: const TextStyle(
+                      color: Colors.grey,
+                      fontStyle: FontStyle.italic,
+                      fontSize: 12,
+                    ),
+                  )
+                ],
+              ),
+            ),
+            Flexible(
+              flex: 2,
               child: Text(
                 relation.titleUserPreferred,
                 textAlign: TextAlign.center,
@@ -46,10 +77,12 @@ class RelationCard extends StatelessWidget {
         MaterialPageRoute(
           builder: (context) => DetailsScreen(
             animeId: relation.id,
+            malId: relation.malId,
             title: relation.titleUserPreferred,
             imageUrl: relation.coverImage,
             bannerImageUrl: relation.bannerImage,
-            score: relation.meanScore,
+            titleRomaji: relation.titleRomaji,
+            totalEpisodes: relation.episodes,
           ),
         ),
       ),

@@ -1,76 +1,113 @@
 import "package:flutter/material.dart";
 import "package:flutter/services.dart";
 
-final lightTheme = ThemeData(
-  appBarTheme: const AppBarTheme(
-    systemOverlayStyle: SystemUiOverlayStyle.dark,
-  ),
-  colorScheme: const ColorScheme(
-    brightness: Brightness.light,
-    primary: Color.fromARGB(255, 230, 175, 65),
-    onPrimary: Color.fromARGB(255, 28, 28, 30),
-    secondary: Color.fromARGB(255, 230, 175, 65),
-    onSecondary: Color.fromARGB(255, 28, 28, 30),
-    error: Color.fromARGB(255, 255, 59, 48),
-    onError: Color.fromARGB(255, 28, 28, 30),
-    background: Color.fromARGB(255, 242, 242, 242),
-    onBackground: Color.fromARGB(255, 28, 28, 30),
-    surface: Color.fromARGB(255, 255, 255, 255),
-    onSurface: Color.fromARGB(255, 28, 28, 30),
-  ),
-  dialogTheme: const DialogTheme(
-    backgroundColor: Color.fromARGB(255, 255, 255, 255),
-    titleTextStyle: TextStyle(
-      color: Color.fromARGB(255, 28, 28, 30),
-      fontSize: 20,
-      fontWeight: FontWeight.w600,
+ThemeData lightTheme({
+  required Color primaryColor,
+}) {
+  return ThemeData(
+    appBarTheme: const AppBarTheme(
+      systemOverlayStyle: SystemUiOverlayStyle.dark,
+      titleTextStyle: TextStyle(
+        color: Colors.white,
+        fontSize: 18,
+        fontWeight: FontWeight.w600,
+      ),
+      iconTheme: IconThemeData(
+        color: Colors.white,
+      ),
     ),
-    contentTextStyle: TextStyle(
-      color: Color.fromARGB(255, 28, 28, 30),
-      fontSize: 16,
-      fontWeight: FontWeight.w400,
+    canvasColor: const Color.fromARGB(255, 242, 242, 242),
+    colorScheme: ColorScheme(
+      brightness: Brightness.light,
+      primary: primaryColor,
+      onPrimary: const Color.fromARGB(255, 28, 28, 30),
+      secondary: primaryColor,
+      onSecondary: const Color.fromARGB(255, 28, 28, 30),
+      error: const Color.fromARGB(255, 255, 59, 48),
+      onError: const Color.fromARGB(255, 28, 28, 30),
+      background: const Color.fromARGB(255, 242, 242, 242),
+      onBackground: const Color.fromARGB(255, 28, 28, 30),
+      surface: const Color.fromARGB(255, 255, 255, 255),
+      onSurface: const Color.fromARGB(255, 28, 28, 30),
     ),
-  ),
-  progressIndicatorTheme: const ProgressIndicatorThemeData(
-    color: Color.fromARGB(255, 230, 175, 65),
-  ),
-  tabBarTheme: const TabBarTheme(
-    indicatorColor: Color.fromARGB(255, 230, 175, 65),
-    labelColor: Color.fromARGB(255, 28, 28, 30),
-  ),
-);
+    dialogTheme: const DialogTheme(
+      backgroundColor: Color.fromARGB(255, 255, 255, 255),
+      titleTextStyle: TextStyle(
+        color: Color.fromARGB(255, 28, 28, 30),
+        fontSize: 20,
+        fontWeight: FontWeight.w600,
+      ),
+      contentTextStyle: TextStyle(
+        color: Color.fromARGB(255, 28, 28, 30),
+        fontSize: 16,
+        fontWeight: FontWeight.w400,
+      ),
+    ),
+    progressIndicatorTheme: ProgressIndicatorThemeData(
+      color: primaryColor,
+    ),
+    tabBarTheme: TabBarTheme(
+      indicatorColor: primaryColor,
+      labelColor: const Color.fromARGB(255, 28, 28, 30),
+    ),
+    // textTheme: const TextTheme(
+    //   bodySmall: TextStyle(),
+    //   bodyMedium: TextStyle(),
+    //   bodyLarge: TextStyle(),
+    //   labelSmall: TextStyle(),
+    //   labelMedium: TextStyle(),
+    //   labelLarge: TextStyle(),
+    //   titleSmall: TextStyle(),
+    //   titleMedium: TextStyle(),
+    //   titleLarge: TextStyle(),
+    // ).apply(
+    //   bodyColor: Colors.white,
+    //   displayColor: Colors.white,
+    // ),
+  );
+}
 
-final darkTheme = ThemeData(
-  appBarTheme: const AppBarTheme(
-    systemOverlayStyle: SystemUiOverlayStyle.light,
-  ),
-  colorScheme: const ColorScheme(
-    brightness: Brightness.dark,
-    primary: Color.fromARGB(255, 240, 185, 65),
-    onPrimary: Color.fromARGB(255, 229, 229, 231),
-    secondary: Color.fromARGB(255, 240, 185, 65),
-    onSecondary: Color.fromARGB(255, 229, 229, 231),
-    error: Color.fromARGB(255, 255, 69, 58),
-    onError: Color.fromARGB(255, 229, 229, 231),
-    background: Color.fromARGB(255, 1, 1, 1),
-    onBackground: Color.fromARGB(255, 229, 229, 231),
-    surface: Color.fromARGB(255, 18, 18, 18),
-    onSurface: Color.fromARGB(255, 229, 229, 231),
-  ),
-  dialogTheme: const DialogTheme(
-    backgroundColor: Color.fromARGB(255, 18, 18, 18),
-    titleTextStyle: TextStyle(
-      color: Color.fromARGB(255, 229, 229, 231),
+ThemeData darkTheme({
+  required Color primaryColor,
+}) {
+  return ThemeData(
+    appBarTheme: AppBarTheme(
+      systemOverlayStyle: SystemUiOverlayStyle.light,
+      titleTextStyle: TextStyle(
+        color: primaryColor,
+        fontSize: 18,
+        fontWeight: FontWeight.w600,
+      ),
     ),
-    contentTextStyle: TextStyle(
-      color: Color.fromARGB(255, 229, 229, 231),
+    canvasColor: const Color.fromARGB(255, 1, 1, 1),
+    colorScheme: ColorScheme(
+      brightness: Brightness.dark,
+      primary: primaryColor,
+      onPrimary: const Color.fromARGB(255, 229, 229, 231),
+      secondary: primaryColor,
+      onSecondary: const Color.fromARGB(255, 229, 229, 231),
+      error: const Color.fromARGB(255, 255, 69, 58),
+      onError: const Color.fromARGB(255, 229, 229, 231),
+      background: const Color.fromARGB(255, 1, 1, 1),
+      onBackground: const Color.fromARGB(255, 229, 229, 231),
+      surface: const Color.fromARGB(255, 18, 18, 18),
+      onSurface: const Color.fromARGB(255, 229, 229, 231),
     ),
-  ),
-  progressIndicatorTheme: const ProgressIndicatorThemeData(
-    color: Color.fromARGB(255, 240, 185, 65),
-  ),
-  tabBarTheme: const TabBarTheme(
-    indicatorColor: Color.fromARGB(255, 240, 185, 65),
-    labelColor: Color.fromARGB(255, 229, 229, 231),
-  ),
-);
+    dialogTheme: const DialogTheme(
+      backgroundColor: Color.fromARGB(255, 18, 18, 18),
+      titleTextStyle: TextStyle(
+        color: Color.fromARGB(255, 229, 229, 231),
+      ),
+      contentTextStyle: TextStyle(
+        color: Color.fromARGB(255, 229, 229, 231),
+      ),
+    ),
+    progressIndicatorTheme: ProgressIndicatorThemeData(
+      color: primaryColor,
+    ),
+    tabBarTheme: TabBarTheme(
+      indicatorColor: primaryColor,
+      labelColor: const Color.fromARGB(255, 229, 229, 231),
+    ),
+  );
+}

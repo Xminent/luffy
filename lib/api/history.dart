@@ -6,7 +6,7 @@ import "package:luffy/api/anime.dart";
 import "package:luffy/util.dart";
 
 class HistoryEntry {
-  const HistoryEntry({
+  HistoryEntry({
     required this.id,
     this.animeId,
     required this.title,
@@ -32,13 +32,13 @@ class HistoryEntry {
         showUrl = json["show_url"];
 
   // The ID of the anime (if a normie show/movie will be formatted like so: "$sourceName-$showId")
-  final String? id;
+  final String id;
   // The ID of the anime if its actually an anime found on MAL/Anilist
   final int? animeId;
   //  The title of the anime/show/movie
   final String title;
   // The image URL of the anime/show/movie
-  final String imageUrl;
+  final String? imageUrl;
   // The stored progress of the media (is indexed by the episode number)
   final Map<int, double> progress;
   // The total number of episodes of the media
@@ -91,60 +91,62 @@ class HistoryService {
     // TODO: Debug delete.
     // await _storage.delete(key: "history");
 
-    if (_instance == null) {
-      final historyStr = await _storage.read(key: "history");
-
-      prints("History: $historyStr");
-
-      final history = historyStr != null
-          ? (jsonDecode(historyStr) as List)
-              .map(
-                (e) => HistoryEntry(
-                  id: e["id"],
-                  animeId: e["anime_id"],
-                  title: e["title"],
-                  imageUrl: e["image_url"],
-                  progress: e["progress"] != null
-                      ? Map.fromEntries(
-                          (e["progress"] as Map<String, dynamic>).entries.map(
-                                (e) => MapEntry(int.parse(e.key), e.value),
-                              ),
-                        )
-                      : {},
-                  totalEpisodes: e["total_episodes"],
-                  sources: e["sources"] != null
-                      ? Map.fromEntries(
-                          (e["sources"] as Map<String, dynamic>).entries.map(
-                                (e) => MapEntry(
-                                  int.parse(e.key),
-                                  (e.value as List)
-                                      .map((e) => VideoSource.fromJson(e))
-                                      .toList(),
-                                ),
-                              ),
-                        )
-                      : {},
-                  subtitles: e["subtitles"] != null
-                      ? Map.fromEntries(
-                          (e["subtitles"] as Map<String, dynamic>).entries.map(
-                                (e) => MapEntry(
-                                  int.parse(e.key),
-                                  (e.value as List)
-                                      .map((e) => Subtitle.fromJson(e))
-                                      .toList(),
-                                ),
-                              ),
-                        )
-                      : {},
-                  sourceExpiration: DateTime.parse(e["source_expiration"]),
-                  showUrl: e["show_url"],
-                ),
-              )
-              .toList()
-          : <HistoryEntry>[];
-
-      _instance = HistoryService._internal(history);
+    if (_instance != null) {
+      return _instance!;
     }
+
+    final historyStr = await _storage.read(key: "history");
+
+    prints("History: $historyStr");
+
+    final history = historyStr != null
+        ? (jsonDecode(historyStr) as List)
+            .map(
+              (e) => HistoryEntry(
+                id: e["id"],
+                animeId: e["anime_id"],
+                title: e["title"],
+                imageUrl: e["image_url"],
+                progress: e["progress"] != null
+                    ? Map.fromEntries(
+                        (e["progress"] as Map<String, dynamic>).entries.map(
+                              (e) => MapEntry(int.parse(e.key), e.value),
+                            ),
+                      )
+                    : {},
+                totalEpisodes: e["total_episodes"],
+                sources: e["sources"] != null
+                    ? Map.fromEntries(
+                        (e["sources"] as Map<String, dynamic>).entries.map(
+                              (e) => MapEntry(
+                                int.parse(e.key),
+                                (e.value as List)
+                                    .map((e) => VideoSource.fromJson(e))
+                                    .toList(),
+                              ),
+                            ),
+                      )
+                    : {},
+                subtitles: e["subtitles"] != null
+                    ? Map.fromEntries(
+                        (e["subtitles"] as Map<String, dynamic>).entries.map(
+                              (e) => MapEntry(
+                                int.parse(e.key),
+                                (e.value as List)
+                                    .map((e) => Subtitle.fromJson(e))
+                                    .toList(),
+                              ),
+                            ),
+                      )
+                    : {},
+                sourceExpiration: DateTime.parse(e["source_expiration"]),
+                showUrl: e["show_url"],
+              ),
+            )
+            .toList()
+        : <HistoryEntry>[];
+
+    _instance = HistoryService._internal(history);
 
     return _instance!;
   }
@@ -211,7 +213,10 @@ class HistoryService {
 
   static Future<List<HistoryEntry>> getHistory() async {
     final instance = await _getInstance();
-    return instance._history;
+
+    prints("History: ${instance._history}");
+
+    return instance._history.reversed.toList();
   }
 
   static Future<void> clearHistory() async {

@@ -1,6 +1,6 @@
 import "package:flutter/material.dart";
 import "package:luffy/api/anime.dart";
-import "package:luffy/screens/video_player_mpv.dart";
+import "package:luffy/screens/video_player_mobile.dart";
 
 class VideoPlayerScreen extends StatelessWidget {
   const VideoPlayerScreen({
@@ -48,7 +48,7 @@ class VideoPlayerScreen extends StatelessWidget {
     //   );
     // }
 
-    return VideoPlayerScreenMpv(
+    return VideoPlayerScreenMobile(
       showId: showId,
       showTitle: showTitle,
       episode: episode,
