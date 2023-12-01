@@ -1,6 +1,7 @@
 import "dart:io";
 
 import "package:innosetup/innosetup.dart";
+// ignore: depend_on_referenced_packages
 import "package:version/version.dart";
 
 void main() {

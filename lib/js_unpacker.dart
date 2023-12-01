@@ -29,7 +29,7 @@ class Unbaser {
     final dict = alphabet[selector]?.split("").asMap();
 
     var returnVal = 0;
-    final valArray = value.split("").reversed.toList();
+    final valArray = value.codeUnits.toList();
 
     for (int i = 0; i < valArray.length; i++) {
       final cipher = valArray[i];

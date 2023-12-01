@@ -21,8 +21,6 @@ class _ParallaxContainerState extends State<ParallaxContainer>
     with SingleTickerProviderStateMixin {
   AnimationController? _controller;
   late Animation<double>? _animation;
-  // TODO
-  // late Future<bool> _imageExists;
 
   @override
   void initState() {

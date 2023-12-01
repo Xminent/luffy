@@ -149,23 +149,6 @@ enum AnimeListStatus {
   planToWatch,
 }
 
-AnimeListStatus _stringToAnimeListStatus(String status) {
-  switch (status) {
-    case "watching":
-      return AnimeListStatus.watching;
-    case "completed":
-      return AnimeListStatus.completed;
-    case "on_hold":
-      return AnimeListStatus.onHold;
-    case "dropped":
-      return AnimeListStatus.dropped;
-    case "plan_to_watch":
-      return AnimeListStatus.planToWatch;
-  }
-
-  throw Exception("Invalid anime list status: $status");
-}
-
 String _animeListStatusToString(AnimeListStatus status) {
   switch (status) {
     case AnimeListStatus.watching:

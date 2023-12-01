@@ -202,7 +202,7 @@ class _EpisodeListState extends State<EpisodeList> {
 
     if (itemsVertical.length > 1) {
       return Column(
-        // TODO: Potentially remove this as it makes the UI look weird
+        // TODO(xminent): Potentially remove this as it makes the UI look weird
         mainAxisAlignment: thumbnail == null
             ? MainAxisAlignment.spaceBetween
             : MainAxisAlignment.start,

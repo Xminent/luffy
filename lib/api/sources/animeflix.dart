@@ -351,7 +351,7 @@ class AnimeFlixExtractor extends AnimeExtractor {
           );
         }
       }
-    } on DioError catch (e) {
+    } on DioException catch (e) {
       prints("Failed to get episodes AnimeFlix: $e");
     }
 
@@ -393,7 +393,7 @@ class AnimeFlixExtractor extends AnimeExtractor {
         for (var i = (firstServerIdx + 1) % _servers.length;
             i != firstServerIdx;
             i = (i + 1) % _servers.length) {
-          // TODO: Once we can figure out the servers we can use this to skip servers that are down.
+          // TODO(xminent): Once we can figure out the servers we can use this to skip servers that are down.
           // if (servers[i] == "0") {
           //   continue;
           // }
@@ -413,7 +413,7 @@ class AnimeFlixExtractor extends AnimeExtractor {
           }
         }
       }
-    } on DioError catch (e) {
+    } on DioException catch (e) {
       prints("Failed to get video url AnimeFlix: $e");
     }
 

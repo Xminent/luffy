@@ -297,11 +297,9 @@ class _DetailsScreenState extends State<DetailsScreen>
     widget.onUpdate?.call(score, watchedEpisodes, status);
   }
 
-  Future<bool> _onWillPop() async {
-    if (_oldScore == _score &&
-        _oldStatus == _status &&
-        _oldWatchedEpisodes == _watchedEpisodes) {
-      return true;
+  Future<void> _onPop(bool didPop) async {
+    if (!didPop) {
+      return;
     }
 
     final result = await showDialog<bool>(
@@ -327,15 +325,9 @@ class _DetailsScreenState extends State<DetailsScreen>
       ),
     );
 
-    if (result == null) {
-      return false;
-    }
-
-    if (result) {
+    if (result != null && result) {
       await _saveChanges();
     }
-
-    return true;
   }
 
   void _setInitialValues(AnimeStats? animeInfo) {
@@ -377,8 +369,11 @@ class _DetailsScreenState extends State<DetailsScreen>
   Widget build(BuildContext context) {
     super.build(context);
 
-    return WillPopScope(
-      onWillPop: _onWillPop,
+    return PopScope(
+      canPop: _oldScore == _score &&
+          _oldStatus == _status &&
+          _oldWatchedEpisodes == _watchedEpisodes,
+      onPopInvoked: _onPop,
       child: SafeArea(
         child: FutureBuilder(
           future: _animeInfoFuture,

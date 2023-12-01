@@ -328,8 +328,8 @@ class NineAnimeExtractor extends AnimeExtractor implements AnimeParser {
   Episode episodeFromElement(Element element, String url) {
     final episodeNum = element.attributes["data-num"] ?? "";
     final ids = element.attributes["data-ids"] ?? "";
-    final sub = element.attributes["data-sub"] == "1";
-    final dub = element.attributes["data-dub"] == "1";
+    // final sub = element.attributes["data-sub"] == "1";
+    // final dub = element.attributes["data-dub"] == "1";
     final name = element.parent?.querySelector("span.d-title")?.text;
     final namePrefix = "Episode $episodeNum";
 

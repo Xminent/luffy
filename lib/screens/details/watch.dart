@@ -354,6 +354,7 @@ class _WatchScreenState extends State<WatchScreen>
             return Column(
               children: [
                 ..._buildDropdownButton(),
+                ..._buildResumeButton(data),
                 EpisodeList(
                   episodes: data.episodes,
                   episodeInfo: data.info,

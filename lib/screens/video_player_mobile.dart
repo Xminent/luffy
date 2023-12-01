@@ -446,12 +446,13 @@ class _VideoPlayerScreenMobileState extends State<VideoPlayerScreenMobile> {
         (controller?.value.isInitialized ?? false) && controller != null;
     final buffered = controller?.value.buffered ?? [];
 
-    return WillPopScope(
-      onWillPop: () async {
+    return PopScope(
+      canPop: controller == null,
+      onPopInvoked: (didPop) async {
         final controller = _controller;
 
-        if (controller == null) {
-          return true;
+        if (!didPop || controller == null) {
+          return;
         }
 
         // Pop it manually.
@@ -459,8 +460,6 @@ class _VideoPlayerScreenMobileState extends State<VideoPlayerScreenMobile> {
             controller.value.duration.inMilliseconds;
 
         Navigator.pop(context, progress.isFinite ? progress : null);
-
-        return false;
       },
       child: SafeArea(
         child: Scaffold(

@@ -57,7 +57,6 @@
 //         Anime(
 //           title: title,
 //           url: url,
-//           // TODO: Make parameter optional
 //           imageUrl: imageUrl ?? "",
 //         ),
 //       );

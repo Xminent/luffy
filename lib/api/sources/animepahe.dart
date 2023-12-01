@@ -45,13 +45,13 @@ Future<bool> _generateSession() async {
   }
 }
 
-final RegExp _ytsm = RegExp(r"ysmm = '([^']+)");
-final RegExp _kwikParamsRe = RegExp(r'\("(\w+)",\d+,"(\w+)",(\d+),(\d+),\d+\)');
-final RegExp _kwikDUrl = RegExp(r'action=\"([^"]+)"');
-final RegExp _kwikDToken = RegExp('value="([^"]+)"');
-final RegExp _youtubeVideoLink = RegExp(
-  r"(^(?:https?:)?(?://)?(?:www\.)?(?:youtu\.be/|youtube(?:-nocookie)?\.(?:[A-Za-z]{2,4}|[A-Za-z]{2,3}\.[A-Za-z]{2})/)(?:watch|embed/|vi?/)*(?:\?[\w=&]*vi?=)?[^#&?/]{11}.*${'$'})",
-);
+// final RegExp _ytsm = RegExp(r"ysmm = '([^']+)");
+// final RegExp _kwikParamsRe = RegExp(r'\("(\w+)",\d+,"(\w+)",(\d+),(\d+),\d+\)');
+// final RegExp _kwikDUrl = RegExp(r'action=\"([^"]+)"');
+// final RegExp _kwikDToken = RegExp('value="([^"]+)"');
+// final RegExp _youtubeVideoLink = RegExp(
+//   r"(^(?:https?:)?(?://)?(?:www\.)?(?:youtu\.be/|youtube(?:-nocookie)?\.(?:[A-Za-z]{2,4}|[A-Za-z]{2,3}\.[A-Za-z]{2})/)(?:watch|embed/|vi?/)*(?:\?[\w=&]*vi?=)?[^#&?/]{11}.*${'$'})",
+// );
 
 class AnimePaheSearchData {
   AnimePaheSearchData.fromJson(Map<String, dynamic> json)
@@ -404,24 +404,24 @@ class AnimePahe {
     }
 
     try {
-      final res = await http.get(
-        Uri.parse(
-          "$_mainUrl/anime/$session",
-        ),
-      );
+      // final res = await http.get(
+      //   Uri.parse(
+      //     "$_mainUrl/anime/$session",
+      //   ),
+      // );
 
-      final html = res.body;
-      final doc = parse(html);
+      // final html = res.body;
+      // final doc = parse(html);
 
-      final japTitle = doc.querySelector("h2.japanese")?.text;
-      final animeTitle = doc.querySelector("span.sr-only.unselectable")?.text;
-      final poster = doc.querySelector(".anime-poster a")?.attributes["href"];
+      // final japTitle = doc.querySelector("h2.japanese")?.text;
+      // final animeTitle = doc.querySelector("span.sr-only.unselectable")?.text;
+      // final poster = doc.querySelector(".anime-poster a")?.attributes["href"];
 
-      final tvType = doc.querySelector("""a[href*="/anime/type/"]""")?.text;
+      // final tvType = doc.querySelector("""a[href*="/anime/type/"]""")?.text;
 
-      final trailer = html.contains("https://www.youtube.com/watch")
-          ? _youtubeVideoLink.firstMatch(html)?.group(0)
-          : null;
+      // final trailer = html.contains("https://www.youtube.com/watch")
+      //     ? _youtubeVideoLink.firstMatch(html)?.group(0)
+      //     : null;
 
       final episodes = generateListOfEpisodes(session);
 
@@ -436,26 +436,26 @@ class AnimePahe {
       //         ? ShowStatus.Completed
       //         : null;
 
-      final synopsis = doc.querySelector(".anime-synopsis")?.text;
+      // final synopsis = doc.querySelector(".anime-synopsis")?.text;
 
-      int? anilistId;
-      int? malId;
+      // int? anilistId;
+      // int? malId;
 
-      doc.querySelectorAll(".external-links > a").forEach((aTag) {
-        final href = aTag.attributes["href"];
+      // doc.querySelectorAll(".external-links > a").forEach((aTag) {
+      //   final href = aTag.attributes["href"];
 
-        if (href == null) {
-          return;
-        }
+      //   if (href == null) {
+      //     return;
+      //   }
 
-        final split = href.split("/");
+      //   // final split = href.split("/");
 
-        if (href.contains("anilist.co")) {
-          anilistId = int.tryParse(split.last);
-        } else if (href.contains("myanimelist.net")) {
-          malId = int.tryParse(split.last);
-        }
-      });
+      //   // if (href.contains("anilist.co")) {
+      //   //   anilistId = int.tryParse(split.last);
+      //   // } else if (href.contains("myanimelist.net")) {
+      //   //   malId = int.tryParse(split.last);
+      //   // }
+      // });
 
       return episodes;
     } catch (e) {

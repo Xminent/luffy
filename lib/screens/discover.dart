@@ -306,14 +306,6 @@ class _DiscoverScreenState extends State<DiscoverScreen>
                       const SizedBox(height: 16),
                       // Show the rest of the popular anime within the column to listview required.
                       ...topAnimes.popular.map((anime) {
-                        final episodes = anime.episodes ??
-                            (anime.nextAiringEpisode != null
-                                ? anime.nextAiringEpisode! - 1
-                                : null);
-                        final hasEnded = anime.episodes != null &&
-                            anime.nextAiringEpisode == null;
-                        // episodeSuffix should be "/ ???" if end is not known and should also be episode if the value is 1.
-                        final episodeSuffix = hasEnded ? " / ???" : "";
                         final episodesStr = anime.episodes != null
                             ? "${anime.episodes} episodes"
                             : anime.nextAiringEpisode != null
