@@ -451,7 +451,7 @@ class _VideoPlayerScreenMobileState extends State<VideoPlayerScreenMobile> {
       onPopInvoked: (didPop) async {
         final controller = _controller;
 
-        if (!didPop || controller == null) {
+        if (didPop || controller == null) {
           return;
         }
 

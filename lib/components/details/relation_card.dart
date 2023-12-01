@@ -62,7 +62,7 @@ class RelationCard extends StatelessWidget {
               ),
             ),
             Flexible(
-              flex: 2,
+              flex: 3,
               child: Text(
                 relation.titleUserPreferred,
                 textAlign: TextAlign.center,

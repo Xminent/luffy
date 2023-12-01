@@ -138,6 +138,10 @@ class _WatchScreenState extends State<WatchScreen>
   ) {
     final episodeProgress = data.progress;
 
+    if (episodeProgress.isEmpty) {
+      return const Tuple2([], null);
+    }
+
     final recentProgress = episodeProgress.entries.reduce(
       (value, element) => element.value > value.value ? element : value,
     );

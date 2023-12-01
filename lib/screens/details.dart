@@ -298,7 +298,7 @@ class _DetailsScreenState extends State<DetailsScreen>
   }
 
   Future<void> _onPop(bool didPop) async {
-    if (!didPop) {
+    if (didPop) {
       return;
     }
 
