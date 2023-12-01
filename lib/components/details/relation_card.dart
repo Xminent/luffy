@@ -57,7 +57,7 @@ class RelationCard extends StatelessWidget {
                       fontStyle: FontStyle.italic,
                       fontSize: 12,
                     ),
-                  )
+                  ),
                 ],
               ),
             ),

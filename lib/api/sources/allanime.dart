@@ -15,7 +15,7 @@ class AllAnime {
           "allowAdult": false,
           "query": query,
         },
-        "translationType": "sub"
+        "translationType": "sub",
       },
       // "extensions": {
       //   "persistedQuery": {

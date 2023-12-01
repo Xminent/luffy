@@ -224,7 +224,7 @@ class _SearchScreenSourcesState extends State<SearchScreenSources>
                           .toList(),
                     );
                   },
-                )
+                ),
               ],
             ),
           ),

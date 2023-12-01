@@ -168,7 +168,7 @@ class _WatchScreenState extends State<WatchScreen>
               Text("Resume Episode ${recentProgress.key + 1}"),
             ],
           ),
-        )
+        ),
       ],
       recentProgress.value,
     );
@@ -209,7 +209,7 @@ class _WatchScreenState extends State<WatchScreen>
             Text("Watch Episode ${watchedEpisodes + 1}"),
           ],
         ),
-      )
+      ),
     ];
   }
 
@@ -223,7 +223,7 @@ class _WatchScreenState extends State<WatchScreen>
               value: recentProgress,
               backgroundColor: primaryColor.withOpacity(0.1),
               valueColor: AlwaysStoppedAnimation(primaryColor),
-            )
+            ),
           ]
         : [];
 

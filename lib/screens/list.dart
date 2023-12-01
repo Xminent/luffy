@@ -139,7 +139,7 @@ class _ListScreenState extends State<ListScreen>
                   animeList.planToWatch,
                   animeList.onHold,
                   animeList.completed,
-                  animeList.dropped
+                  animeList.dropped,
                 ]
                     .map(
                       (e) => CustomRefreshIndicator(

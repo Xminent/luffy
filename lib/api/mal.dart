@@ -432,7 +432,7 @@ class MalService {
         Uri.parse("https://myanimelist.net/anime/$id/anime/characters"),
         headers: {
           "User-Agent":
-              "Mozilla/5.0 (Linux; Android 10; SAMSUNG SM-G965F) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/12.1 Chrome/79.0.3945.136 Mobile Safari/537.36"
+              "Mozilla/5.0 (Linux; Android 10; SAMSUNG SM-G965F) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/12.1 Chrome/79.0.3945.136 Mobile Safari/537.36",
         },
       );
 
@@ -695,7 +695,7 @@ class MalService {
         ),
         headers: {
           "User-Agent":
-              "Mozilla/5.0 (Linux; Android 10; SAMSUNG SM-G965F) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/12.1 Chrome/79.0.3945.136 Mobile Safari/537.36"
+              "Mozilla/5.0 (Linux; Android 10; SAMSUNG SM-G965F) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/12.1 Chrome/79.0.3945.136 Mobile Safari/537.36",
         },
       );
 
@@ -921,7 +921,7 @@ class MalService {
         Uri.parse("https://myanimelist.net/anime.php?q=$query&show=0"),
         headers: {
           "User-Agent":
-              "Mozilla/5.0 (Linux; Android 10; SAMSUNG SM-G965F) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/12.1 Chrome/79.0.3945.136 Mobile Safari/537.36"
+              "Mozilla/5.0 (Linux; Android 10; SAMSUNG SM-G965F) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/12.1 Chrome/79.0.3945.136 Mobile Safari/537.36",
         },
       );
 
@@ -1126,7 +1126,7 @@ Future<AnimeList> _convertJsonToAnimeList(Map<String, dynamic> json) async {
         Uri.parse("https://kanonapp.com/anime/KitsuInfo"),
         headers: {
           "apikey": "EUPP4UQDFJ435B5A900K",
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
         },
         body: jsonEncode(extraDataIds),
       );
@@ -1164,13 +1164,17 @@ Future<AnimeList> _convertJsonToAnimeList(Map<String, dynamic> json) async {
       return;
     }
 
-    final status = extraDataMap[id]!;
+    final status = extraDataMap[id];
     final startDateStr = data["StartDate"] as String?;
     final endDateStr = data["EndDate"] as String?;
     final startDate =
         startDateStr != null ? DateTime.parse(startDateStr).toLocal() : null;
     final endDate =
         endDateStr != null ? DateTime.parse(endDateStr).toLocal() : null;
+
+    if (status == null) {
+      return;
+    }
 
     final toModify = (() {
       switch (status.item1) {
@@ -1226,8 +1230,12 @@ Future<AnimeList> _convertJsonToAnimeList(Map<String, dynamic> json) async {
           return;
         }
 
-        final status = missingEpisodes[id]!;
+        final status = missingEpisodes[id];
         final totalEpisodes = (item["episode"] as int) - 1;
+
+        if (status == null) {
+          return;
+        }
 
         switch (status.item1) {
           case AnimeListStatus.watching:

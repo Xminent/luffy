@@ -220,7 +220,7 @@ class _DetailsScreenState extends State<DetailsScreen>
           BottomNavigationBarItem(
             icon: Icon(Icons.movie),
             label: "Watch",
-          )
+          ),
         ],
       ),
     );
@@ -245,7 +245,7 @@ class _DetailsScreenState extends State<DetailsScreen>
 
           await launchUrl(uri, mode: LaunchMode.externalApplication);
         },
-      )
+      ),
     ];
   }
 

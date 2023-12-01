@@ -104,12 +104,12 @@ class AnimeCard extends StatelessWidget {
                                   const Icon(
                                     Icons.star,
                                     size: 12,
-                                  )
+                                  ),
                                 ],
                               ),
                             ),
                           ),
-                        )
+                        ),
                       ],
                     ),
                   ),
@@ -140,7 +140,7 @@ class AnimeCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-            ]
+            ],
           ],
         ),
       ),

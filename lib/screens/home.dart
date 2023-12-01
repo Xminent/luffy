@@ -22,7 +22,7 @@ class _HomeScreenState extends State<HomeScreen>
     const HomeScreenInner(),
     const DiscoverScreen(),
     const SearchScreen(),
-    const SearchScreenSources()
+    const SearchScreenSources(),
   ];
 
   void _handleTabChange() {

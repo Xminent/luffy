@@ -77,7 +77,7 @@ Future<List<Video>> extractVideoConsumet(
       case "vidstream":
       case "mycloud":
         final embedReferer = {
-          "referer": "https://${Uri.parse(embedLink).host}/"
+          "referer": "https://${Uri.parse(embedLink).host}/",
         };
 
         final vidId = Uri.parse(embedLink).pathSegments.last.split("?").first;

@@ -190,7 +190,7 @@ class _DetailsScreenSourcesState extends State<DetailsScreenSources>
               Text("Resume Episode ${recentProgress.key + 1}"),
             ],
           ),
-        )
+        ),
       ],
       recentProgress.value,
     );
@@ -231,7 +231,7 @@ class _DetailsScreenSourcesState extends State<DetailsScreenSources>
             Text("Watch Episode ${watchedEpisodes + 1}"),
           ],
         ),
-      )
+      ),
     ];
   }
 
@@ -249,7 +249,7 @@ class _DetailsScreenSourcesState extends State<DetailsScreenSources>
               value: recentProgress,
               backgroundColor: primaryColor.withOpacity(0.1),
               valueColor: AlwaysStoppedAnimation(primaryColor),
-            )
+            ),
           ]
         : [];
 

@@ -29,7 +29,7 @@ class KituService {
   static Future<List<Episode>> search(int animeId) async {
     final params = {
       "query":
-          "query {  lookupMapping(externalId: $animeId, externalSite: ANILIST_ANIME) {    __typename    ... on Anime {      id      episodes(first: 2000) {        nodes {          number          titles {            canonical          }          description          thumbnail {            original {              url            }          }        }      }    }  }}"
+          "query {  lookupMapping(externalId: $animeId, externalSite: ANILIST_ANIME) {    __typename    ... on Anime {      id      episodes(first: 2000) {        nodes {          number          titles {            canonical          }          description          thumbnail {            original {              url            }          }        }      }    }  }}",
     };
 
     try {

@@ -26,7 +26,7 @@ class _AnimeBrowserState extends State<AnimeBrowser> {
         action: ContentBlockerAction(
           type: ContentBlockerActionType.BLOCK,
         ),
-      )
+      ),
     ],
     useShouldOverrideUrlLoading: true,
   );
@@ -119,7 +119,7 @@ class _AnimeBrowserState extends State<AnimeBrowser> {
                         "chrome",
                         "data",
                         "javascript",
-                        "about"
+                        "about",
                       ].contains(url.scheme)) {
                         if (await canLaunchUrl(url)) {
                           // Launch the App
@@ -188,7 +188,6 @@ class _AnimeBrowserState extends State<AnimeBrowser> {
                               episode: Episode(
                                 title: "Video",
                                 url: "",
-                                thumbnailUrl: null,
                               ),
                               episodeNum: 0,
                               sourceName: "Anime Browser",
@@ -198,7 +197,7 @@ class _AnimeBrowserState extends State<AnimeBrowser> {
                                 VideoSource(
                                   videoUrl: url,
                                   description: "Anime Browser",
-                                )
+                                ),
                               ],
                               showUrl: "",
                             ),

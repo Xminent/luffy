@@ -229,7 +229,7 @@ class _InfoScreenState extends State<InfoScreen> {
         items: characters,
         title: "Characters",
         builder: (_, idx) => CharacterCard(character: characters[idx]),
-      )
+      ),
     ];
   }
 
@@ -246,7 +246,7 @@ class _InfoScreenState extends State<InfoScreen> {
         items: relations,
         title: "Relations",
         builder: (_, idx) => RelationCard(relation: relations[idx]),
-      )
+      ),
     ];
   }
 
@@ -269,7 +269,7 @@ class _InfoScreenState extends State<InfoScreen> {
           opensDetails: true,
         ),
         spaceBetween: 24,
-      )
+      ),
     ];
   }
 

@@ -112,7 +112,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                                       ?.copyWith(fontWeight: FontWeight.bold),
                                 ),
                               ),
-                            )
+                            ),
                           ],
                         );
                       },
@@ -155,7 +155,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                     ),
                   ),
                   child: const Text("Login"),
-                )
+                ),
               ],
             ),
           ),
@@ -179,7 +179,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                     ),
               ),
             ),
-          )
+          ),
         ],
       ),
     );

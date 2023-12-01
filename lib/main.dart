@@ -32,7 +32,7 @@ Future main() async {
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.landscapeLeft,
-    DeviceOrientation.landscapeRight
+    DeviceOrientation.landscapeRight,
   ]);
 
   if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {

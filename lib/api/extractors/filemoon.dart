@@ -1,6 +1,6 @@
 import "package:html/parser.dart";
 import "package:http/http.dart" as http;
-import 'package:luffy/api/sources/nineanime.dart';
+import "package:luffy/api/sources/nineanime.dart";
 import "package:luffy/js_unpacker.dart";
 import "package:luffy/util.dart";
 

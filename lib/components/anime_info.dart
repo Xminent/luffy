@@ -106,7 +106,7 @@ class AnimeInfo extends StatelessWidget {
                                             .withOpacity(0.5),
                                         size: 24,
                                       ),
-                              )
+                              ),
                             ],
                           ),
                           Text("$startDate - $endDate"),
@@ -152,7 +152,7 @@ class AnimeInfo extends StatelessWidget {
                   ],
                 ),
               ),
-            )
+            ),
           ],
         ),
       ),

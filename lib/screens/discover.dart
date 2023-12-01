@@ -160,7 +160,7 @@ class _DiscoverScreenState extends State<DiscoverScreen>
                                             ),
                                             Text(
                                               "${anime.episodes} episodes",
-                                            )
+                                            ),
                                           ],
                                         ),
                                       ),
@@ -200,10 +200,10 @@ class _DiscoverScreenState extends State<DiscoverScreen>
                                               style: const TextStyle(
                                                 fontWeight: FontWeight.bold,
                                               ),
-                                            )
+                                            ),
                                           ],
                                         ),
-                                      )
+                                      ),
                                     ],
                                   ),
                                 );
@@ -282,7 +282,7 @@ class _DiscoverScreenState extends State<DiscoverScreen>
                                         maxLines: 2,
                                         overflow: TextOverflow.ellipsis,
                                       ),
-                                    )
+                                    ),
                                   ],
                                 ),
                               ),
@@ -391,17 +391,17 @@ class _DiscoverScreenState extends State<DiscoverScreen>
                                         const SizedBox(height: 8),
                                         Text(
                                           episodesStr,
-                                        )
+                                        ),
                                       ],
                                     ),
-                                  )
+                                  ),
                                 ],
                               ),
                             ),
                           ),
-                          const SizedBox(height: 16)
+                          const SizedBox(height: 16),
                         ];
-                      }).flattened
+                      }).flattened,
                     ],
                   ),
                 ),

@@ -92,6 +92,7 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
   bool _controlsLocked = false;
   bool _unlockIconVisible = false;
   SubtitleController? _subtitleController;
+  bool _skippedIntro = false;
 
   Widget _buildBrightnessIcon() {
     if (_brightness > 0.6) {
@@ -150,12 +151,12 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
                       ),
                     ),
                   ),
-                )
+                ),
               ],
             ),
           ),
         ),
-      )
+      ),
     ];
   }
 
@@ -187,7 +188,7 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
             style: const TextStyle(color: Colors.white, fontSize: 36),
           ),
         ),
-      )
+      ),
     ];
   }
 
@@ -224,12 +225,12 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
                       ),
                     ),
                   ),
-                )
+                ),
               ],
             ),
           ),
         ),
-      )
+      ),
     ];
   }
 
@@ -295,7 +296,7 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
               SubtitleControlView(
                 subtitleController: controller,
                 inMilliseconds: widget.position.inMilliseconds,
-              )
+              ),
             ],
           ),
         ),
@@ -328,7 +329,7 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
                       Colors.black54,
                       Colors.black54,
                       Colors.black54,
-                      Colors.black54
+                      Colors.black54,
                     ],
                   ),
                 ),
@@ -369,7 +370,12 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
                               else
                                 Flexible(
                                   child: IconButton(
-                                    onPressed: widget.onPlayPause,
+                                    onPressed: () {
+                                      widget.onPlayPause();
+                                      setState(() {
+                                        _skippedIntro = false;
+                                      });
+                                    },
                                     icon: Icon(
                                       widget.isPlaying
                                           ? Icons.pause
@@ -400,118 +406,140 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
                         decoration: const BoxDecoration(
                             // border: Border.all(color: Colors.green),
                             ),
-                        height: _showControls ? 0.275 * height : 0,
+                        height: _showControls ? 0.3 * height : 0,
                         duration: const Duration(milliseconds: 100),
                         curve: Curves.easeInOut,
                         child: Column(
                           children: [
-                            Expanded(
-                              child: ProgressBar(
-                                duration: widget.duration,
-                                position: widget.position,
-                                buffered: widget.buffered,
-                                onProgressChanged: widget.onProgressChanged,
+                            if (!_skippedIntro)
+                              Flexible(
+                                child: Container(
+                                  padding: const EdgeInsets.only(right: 8),
+                                  // decoration: BoxDecoration(
+                                  //   border: Border.all(
+                                  //       // color: Colors.blue,
+                                  //       ),
+                                  // ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      VideoPlayerIcon(
+                                        onPressed: () {
+                                          widget.onProgressChanged(
+                                            widget.position +
+                                                const Duration(
+                                                  seconds: 85,
+                                                ),
+                                          );
+
+                                          setState(() {
+                                            _skippedIntro = true;
+                                          });
+                                        },
+                                        label: "+85",
+                                        border: Border.all(
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            Flexible(
+                              child: Container(
+                                decoration: const BoxDecoration(
+                                    // border: Border.all(color: Colors.blue),
+                                    ),
+                                child: ProgressBar(
+                                  duration: widget.duration,
+                                  position: widget.position,
+                                  buffered: widget.buffered,
+                                  onProgressChanged: widget.onProgressChanged,
+                                ),
                               ),
                             ),
                             Expanded(
-                              child: Padding(
-                                padding: const EdgeInsets.only(bottom: 4.0),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    VideoPlayerIcon(
-                                      icon: Icons.lock_open_sharp,
-                                      onPressed: () {
-                                        setState(() {
-                                          _controlsLocked = true;
-                                          _unlockIconVisible = true;
-                                        });
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  VideoPlayerIcon(
+                                    icon: Icons.lock_open_sharp,
+                                    onPressed: () {
+                                      setState(() {
+                                        _controlsLocked = true;
+                                        _unlockIconVisible = true;
+                                      });
 
-                                        Timer(const Duration(seconds: 1), () {
-                                          setState(() {
-                                            _unlockIconVisible = false;
-                                          });
+                                      Timer(const Duration(seconds: 1), () {
+                                        setState(() {
+                                          _unlockIconVisible = false;
+                                        });
+                                      });
+                                    },
+                                    label: "Lock",
+                                  ),
+                                  VideoPlayerIcon(
+                                    icon: Icons.aspect_ratio,
+                                    onPressed: _toggleFit,
+                                    label: "Resize",
+                                  ),
+                                  if (widget.subtitleOffset != null)
+                                    SliderStepper(
+                                      icon: Icons.subtitles,
+                                      title: "Subtitle Offset",
+                                      value: widget.subtitleOffset!,
+                                      min: -widget.duration.inMilliseconds
+                                          .toDouble(),
+                                      max: widget.duration.inMilliseconds
+                                          .toDouble(),
+                                      minStep: 100,
+                                      maxStep: 1000,
+                                      labelBuilder: (offset) =>
+                                          "Offset (${offset.toStringAsFixed(0)}ms)",
+                                      tooltipBuilder: (offset) =>
+                                          "${offset.toStringAsFixed(0)}ms",
+                                      onValueChanged: (offset) {
+                                        setState(() {
+                                          widget.onSubtitleOffsetChanged(
+                                            offset,
+                                          );
                                         });
                                       },
-                                      label: "Lock",
                                     ),
+                                  SliderStepper(
+                                    icon: Icons.speed,
+                                    title: "Speed",
+                                    value: widget.speed,
+                                    original: 1.0,
+                                    labelBuilder: (speed) =>
+                                        "Speed (${speed.toStringAsFixed(2)}x)",
+                                    tooltipBuilder: (speed) =>
+                                        "${(speed * 100).toStringAsFixed(0)}%",
+                                    onValueChanged: widget.onSpeedChanged,
+                                  ),
+                                  if (widget.sources != null)
+                                    VideoPlayerSourceIcon(
+                                      source: widget.source!,
+                                      sources: widget.sources!,
+                                      subtitle: widget.subtitle,
+                                      subtitles: widget.subtitles,
+                                      onSourceChanged: widget.onSourceChanged,
+                                      onSubtitleChanged:
+                                          widget.onSubtitleChanged,
+                                    ),
+                                  if (moreEpisodes)
                                     VideoPlayerIcon(
-                                      icon: Icons.aspect_ratio,
-                                      onPressed: _toggleFit,
-                                      label: "Resize",
+                                      icon: Icons.skip_next,
+                                      onPressed: () {
+                                        widget.onEpisodeNumChanged(
+                                          widget.episodeNum + 1,
+                                        );
+                                      },
+                                      label: "Next Episode",
                                     ),
-                                    if (widget.subtitleOffset != null)
-                                      SliderStepper(
-                                        icon: Icons.subtitles,
-                                        title: "Subtitle Offset",
-                                        value: widget.subtitleOffset!,
-                                        min: -widget.duration.inMilliseconds
-                                            .toDouble(),
-                                        max: widget.duration.inMilliseconds
-                                            .toDouble(),
-                                        minStep: 100,
-                                        maxStep: 1000,
-                                        labelBuilder: (offset) =>
-                                            "Offset (${offset.toStringAsFixed(0)}ms)",
-                                        tooltipBuilder: (offset) =>
-                                            "${offset.toStringAsFixed(0)}ms",
-                                        onValueChanged: (offset) {
-                                          setState(() {
-                                            widget.onSubtitleOffsetChanged(
-                                              offset,
-                                            );
-                                          });
-                                        },
-                                      ),
-                                    SliderStepper(
-                                      icon: Icons.speed,
-                                      title: "Speed",
-                                      value: widget.speed,
-                                      original: 1.0,
-                                      labelBuilder: (speed) =>
-                                          "Speed (${speed.toStringAsFixed(2)}x)",
-                                      tooltipBuilder: (speed) =>
-                                          "${(speed * 100).toStringAsFixed(0)}%",
-                                      onValueChanged: widget.onSpeedChanged,
-                                    ),
-                                    // SliderDialog(
-                                    //   value: (_subtitleOffset ?? 0).toDouble(),
-                                    //   max: widget.duration.inMilliseconds
-                                    //       .toDouble(),
-                                    //   min: 0,
-                                    //   divisions: widget.duration.inMilliseconds,
-                                    //   title: "Subtitle Offset",
-                                    //   onChanged: (value) {},
-                                    //   onConfirmed: (value) {
-                                    //     setState(() {
-                                    //       _subtitleOffset = value.toInt();
-                                    //     });
-                                    //   },
-                                    // ),
-                                    if (widget.sources != null)
-                                      VideoPlayerSourceIcon(
-                                        source: widget.source!,
-                                        sources: widget.sources!,
-                                        subtitle: widget.subtitle,
-                                        subtitles: widget.subtitles,
-                                        onSourceChanged: widget.onSourceChanged,
-                                        onSubtitleChanged:
-                                            widget.onSubtitleChanged,
-                                      ),
-                                    if (moreEpisodes)
-                                      VideoPlayerIcon(
-                                        icon: Icons.skip_next,
-                                        onPressed: () {
-                                          widget.onEpisodeNumChanged(
-                                            widget.episodeNum + 1,
-                                          );
-                                        },
-                                        label: "Next Episode",
-                                      ),
-                                  ],
-                                ),
+                                ],
                               ),
-                            )
+                            ),
                           ],
                         ),
                       ),
@@ -530,7 +558,7 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              '${widget.showTitle} "E${widget.episodeNum}" ${widget.episodeTitle}',
+                              '${widget.showTitle} "E${widget.episodeNum + 1}" ${widget.episodeTitle}',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,

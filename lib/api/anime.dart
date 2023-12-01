@@ -1,10 +1,10 @@
 import "package:html/dom.dart";
 import "package:html/parser.dart";
-import 'package:luffy/api/sources/animeflix.dart';
-import 'package:luffy/api/sources/animepahe.dart';
-import 'package:luffy/api/sources/gogoanime.dart';
-import 'package:luffy/api/sources/nineanime.dart';
-import 'package:luffy/api/sources/superstream.dart';
+import "package:luffy/api/sources/animeflix.dart";
+import "package:luffy/api/sources/animepahe.dart";
+import "package:luffy/api/sources/gogoanime.dart";
+import "package:luffy/api/sources/nineanime.dart";
+import "package:luffy/api/sources/superstream.dart";
 import "package:luffy/util/subtitle.dart";
 
 class Anime {

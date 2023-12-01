@@ -24,7 +24,7 @@ class CustomDrawer extends StatelessWidget {
               children: [
                 Text(
                   "Luffy ${MyApp.of(context)!.malToken != null ? "(logged in)" : ""}",
-                )
+                ),
               ],
             ),
           ),
@@ -33,7 +33,7 @@ class CustomDrawer extends StatelessWidget {
               leading: const Icon(Icons.login),
               title: const Text("Login"),
               onTap: () {
-                Navigator.pushReplacement(
+                Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) => const LoginScreen(),
@@ -64,7 +64,7 @@ class CustomDrawer extends StatelessWidget {
                 ),
               );
             },
-          )
+          ),
         ],
       ),
     );

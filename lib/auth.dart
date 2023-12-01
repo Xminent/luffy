@@ -64,6 +64,7 @@ class MalToken {
     final refresh = await storage.read(key: "refresh_token");
 
     if (refresh == null) {
+      log("refresh token not found");
       return;
     }
 

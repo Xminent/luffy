@@ -116,7 +116,7 @@ class LoginWindowsScreenState extends State<LoginWindowsScreen> {
                 onPressed: () {
                   Navigator.of(context).pop();
                 },
-              )
+              ),
             ],
           ),
         );
@@ -170,7 +170,7 @@ class LoginWindowsScreenState extends State<LoginWindowsScreen> {
                   onPressed: () {
                     _controller.openDevTools();
                   },
-                )
+                ),
               ],
             ),
           ),

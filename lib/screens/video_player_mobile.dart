@@ -7,7 +7,7 @@ import "package:luffy/api/history.dart";
 import "package:luffy/components/video_player/controls.dart";
 import "package:luffy/util.dart";
 import "package:video_player/video_player.dart";
-import "package:wakelock/wakelock.dart";
+import "package:wakelock_plus/wakelock_plus.dart";
 
 class VideoPlayerScreenMobile extends StatefulWidget {
   const VideoPlayerScreenMobile({
@@ -346,7 +346,7 @@ class _VideoPlayerScreenMobileState extends State<VideoPlayerScreenMobile> {
       DeviceOrientation.landscapeRight,
     ]);
 
-    Wakelock.enable();
+    WakelockPlus.enable();
 
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
       FlutterDisplayMode.setLowRefreshRate();
@@ -364,7 +364,7 @@ class _VideoPlayerScreenMobileState extends State<VideoPlayerScreenMobile> {
           prints(
             "Using cached sources for ${widget.showTitle} episode ${widget.episodeNum}",
           );
-          return history.sources[widget.episodeNum]!;
+          return history.sources[widget.episodeNum];
         }
 
         return widget.sourceFetcher(widget.episodes[_currentEpisodeNum]);
@@ -373,6 +373,22 @@ class _VideoPlayerScreenMobileState extends State<VideoPlayerScreenMobile> {
       // Sometimes it can take too long to fetch the sources and the user has already left the screen.
       if (!mounted) {
         return;
+      }
+
+      if (sources == null) {
+        prints(
+          "No sources found for ${widget.showTitle} episode ${widget.episodeNum}",
+        );
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              "No sources found for ${widget.showTitle} episode ${widget.episodeNum}",
+            ),
+          ),
+        );
+
+        return Navigator.pop(context);
       }
 
       if (sources.isEmpty) {
@@ -522,7 +538,7 @@ class _VideoPlayerScreenMobileState extends State<VideoPlayerScreenMobile> {
       DeviceOrientation.landscapeRight,
     ]);
 
-    Wakelock.disable();
+    WakelockPlus.disable();
 
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
       FlutterDisplayMode.setHighRefreshRate();

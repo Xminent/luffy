@@ -25,7 +25,7 @@ const _headers = {
   "referer": "https://animeflix.live/",
   "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-  "X-Requested-With": "XMLHttpRequest"
+  "X-Requested-With": "XMLHttpRequest",
 };
 
 const _servers = [
@@ -218,7 +218,7 @@ class AnimeFlix {
           );
         }
       }
-    } on DioException catch (e) {
+    } catch (e) {
       prints("Failed to search anime AnimeFlix: $e");
     }
 
@@ -275,7 +275,7 @@ Future<VideoSource?> _getVideoUrl(Uri watchUri, {String? currentSource}) async {
         videoUrl,
         options: Options(headers: _headers),
       );
-    } on DioError catch (e) {
+    } on DioException catch (e) {
       prints("Failed to get video url: $e");
       return null;
     }
@@ -288,7 +288,7 @@ Future<VideoSource?> _getVideoUrl(Uri watchUri, {String? currentSource}) async {
       videoUrl: videoUrl,
       description: source,
     );
-  } on DioError {
+  } on DioException {
     return null;
   }
 }

@@ -34,7 +34,7 @@ class Scrollable<T> extends StatelessWidget {
             itemBuilder: builder,
             separatorBuilder: (_, __) => SizedBox(width: spaceBetween),
           ),
-        )
+        ),
       ],
     );
   }

@@ -51,7 +51,7 @@ class CharacterCard extends StatelessWidget {
                 fontSize: 12,
               ),
             ),
-          )
+          ),
         ],
       ),
     );

@@ -57,7 +57,7 @@ class YouTubeEmbedWindowsState extends State<YouTubeEmbedWindows> {
                 onPressed: () {
                   Navigator.of(context).pop();
                 },
-              )
+              ),
             ],
           ),
         );

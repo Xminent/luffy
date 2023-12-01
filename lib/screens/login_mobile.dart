@@ -56,7 +56,7 @@ class _LoginMobileScreenState extends State<LoginMobileScreen> {
         action: ContentBlockerAction(
           type: ContentBlockerActionType.BLOCK,
         ),
-      )
+      ),
     ],
     useShouldOverrideUrlLoading: true,
   );
@@ -147,7 +147,11 @@ class _LoginMobileScreenState extends State<LoginMobileScreen> {
               return const Center(child: SizedBox.shrink());
             }
 
-            final oauthVars = snapshot.data!;
+            final oauthVars = snapshot.data;
+
+            if (oauthVars == null) {
+              return const Center(child: SizedBox.shrink());
+            }
 
             return Column(
               children: [
@@ -178,7 +182,7 @@ class _LoginMobileScreenState extends State<LoginMobileScreen> {
                       );
                     },
                   ),
-                )
+                ),
               ],
             );
           },

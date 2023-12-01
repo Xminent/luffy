@@ -132,7 +132,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                     style:
                                         Theme.of(context).textTheme.labelSmall,
                                   ),
-                                )
+                                ),
                               ],
                             ),
                           ),

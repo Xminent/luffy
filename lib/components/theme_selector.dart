@@ -8,7 +8,7 @@ const defaultThemeColors = [
   Colors.purple,
   Colors.pink,
   Colors.teal,
-  Colors.indigo
+  Colors.indigo,
 ];
 
 void showThemeDialog(

@@ -1,4 +1,5 @@
 import "dart:convert";
+import "dart:typed_data";
 
 import "package:collection/collection.dart";
 import "package:crypto/crypto.dart";
@@ -8,6 +9,7 @@ import "package:http/http.dart" as http;
 import "package:luffy/api/anime.dart";
 import "package:luffy/util.dart";
 import "package:luffy/util/subtitle.dart" hide Subtitle;
+import "package:pointycastle/export.dart";
 
 final _key =
     Key.fromUtf8(utf8.decode(base64Decode("MTIzZDZjZWRmNjI2ZHk1NDIzM2FhMXc2")));
@@ -16,12 +18,11 @@ final _baseApiUrl =
     utf8.decode(base64Decode("aHR0cHM6Ly9zaG93Ym94LnNoZWd1Lm5ldA=="));
 final _apiUrl =
     "$_baseApiUrl${utf8.decode(base64Decode("L2FwaS9hcGlfY2xpZW50L2luZGV4Lw=="))}";
-final _apiUrl2 = utf8.decode(
+final _secondApiUrl = utf8.decode(
   base64Decode(
     "aHR0cHM6Ly9tYnBhcGkuc2hlZ3UubmV0L2FwaS9hcGlfY2xpZW50L2luZGV4Lw==",
   ),
 );
-
 final _appKey = utf8.decode(base64Decode("bW92aWVib3g="));
 final _appId = utf8.decode(base64Decode("Y29tLnRkby5zaG93Ym94"));
 final _appId2 = utf8.decode(base64Decode("Y29tLm1vdmllYm94cHJvLmFuZHJvaWQ="));
@@ -31,23 +32,41 @@ const _appVersionCode = "160";
 const _headers = {
   "Platform": "android",
   "Accept": "charset=utf-8",
-  "User-Agent":
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
 };
 
-final _token =
+String _randomToken() =>
     List.generate(32, (i) => ("0123456789abcdef".split("")..shuffle()).first)
         .join();
 
-String? _encrypt(String str, Key key, IV iv) {
-  final encrypted = DES3(
+String? _encrypt(String str, String key, String iv) {
+  try {
+    final cipher = PaddedBlockCipher("DES/CBC/PKCS7");
+    final keyParam = KeyParameter(Uint8List.fromList(utf8.encode(key)));
+    cipher.init(
+      true,
+      ParametersWithIV(keyParam, Uint8List.fromList(utf8.encode(iv))),
+    );
+
+    final input = Uint8List.fromList(utf8.encode(str));
+    final encrypted = cipher.process(input);
+
+    return base64.encode(encrypted);
+  } catch (e) {
+    prints("Failed to encrypt: $e");
+    return null;
+  }
+}
+
+String? _decrypt(String encryptedStr, Key key, IV iv) {
+  final encryptedBytes = base64Decode(encryptedStr);
+  final decryptedBytes = DES3(
     key: key.bytes,
     mode: DESMode.CBC,
     iv: iv.bytes,
-    paddingType: DESPaddingType.PKCS7,
-  ).encrypt(utf8.encode(str));
+    paddingType: DESPaddingType.PKCS5,
+  ).decrypt(encryptedBytes);
 
-  return base64Encode(encrypted);
+  return utf8.decode(decryptedBytes);
 }
 
 final _hexDigits = utf8.encode("0123456789ABCDEF");
@@ -86,28 +105,36 @@ String? _getVerify(String? str, String str2, String str3) {
 
 Future<dynamic> _queryApi(
   String query, {
-  bool useAlternativeApi = true,
+  bool useAlternateApi = true,
 }) async {
-  final encrypted = _encrypt(query, _key, _iv);
-  final appKeyHash = _md5(_appKey);
-
-  final newBody =
-      """{"app_key":"$appKeyHash","verify":"${_getVerify(encrypted, _appKey, utf8.decode(_key.bytes))}","encrypt_data":"$encrypted"}""";
-  final base64Body = base64Encode(utf8.encode(newBody));
-
+  final encrypted = _encrypt(query, _key.toString(), _iv.toString());
+  final newBody = {
+    "app_key": _md5(_appKey),
+    "verify": _getVerify(encrypted, _appKey, utf8.decode(_key.bytes)),
+    "encrypt_data": encrypted,
+  };
+  final base64Encoded = base64Encode(utf8.encode(jsonEncode(newBody)));
   final data = {
-    "data": base64Body,
-    "appid": "27",
+    "data": base64Encoded,
+    "appId": "27",
     "platform": "android",
     "version": _appVersionCode,
-    "medium": "Website&token$_token"
+    "medium": "Website&token${_randomToken()}",
   };
 
-  final url = useAlternativeApi ? _apiUrl2 : _apiUrl;
+  prints(
+    "Decrypted test: ${_decrypt("FDGi0pewGc2EaX1jHykG8nGfptPR4xZt+MQjhD9IP24MozQMWVSB/lE1yaYpbWdLKEcZbhoXjZU/ktmj6YkybGV7vluW7brCVQ00PbrQ5xllHPjeeivTheVwCZ+uyOIcWEbUKk79FSPjD4tWaKMVWb1RqjNjyP5vyaIJhLMHQBj7UyVrzyjizAiA2kpI3hgDyJa2PJ1OMJeYvEyOeIRdc7TrAbFNuchucYS+5TgNkJMckztw+H/WwzbWRlZHj3bivdu0MqBC5aewjF86Aoei3s7vWeXI2X5aD9oe+1B9/f9jUIFJO+Z8tZ2TPfzwZ92h", _key, _iv)}",
+  );
+  prints(
+    "Decrypted test: ${_decrypt("FDGi0pewGc2EaX1jHykG8tByS299LDJBUwAej1he8xdZxPjUvva2OUgspIy/cWrY38vmgubbqjcSWzF6ea6wMoTsqpbtuTqo2X5OsK/iy+rZ8tjUfIoiQAhAuJGnOPVKONBn3DLKnh+b0CZpkLTxG/U2pA4XbxeCfJ+hEIKzkMD/RH/SYfMHrtCDrz1a3kqejIyVIjRlpoNxrZiUzta1VvLhKrtUDWJtMCvSOe6sw4W4AXK5jBibpwUPUhAXhNUPVViCtYgBn/Wt40xLkbQeb5tPlb+E6K9hSKiWXUtx0DQ=", _key, _iv)}",
+  );
+  prints(
+    "Decrypted test: ${_decrypt("FDGi0pewGc2EaX1jHykG8nGfptPR4xZt+MQjhD9IP24MozQMWVSB/lE1yaYpbWdLKEcZbhoXjZU/ktmj6YkybGV7vluW7brCVQ00PbrQ5xmhzgI1Y2TmUxh2NmdfxLB6Ccwu0kiOJ9Q4Yy99oBc7XyO+vpiNxWXuZmZDMUP20/XdUsNfjcBj5JE/3NlZZxsHZaSy72E0fBu6ZJmOASnBVze8/NlO+GcBCASC6jj3HFk2wLQDquw0ygLS2cPfoy82n2X8Bhp2eyQCVW7hos8pFtwHHBtO1rrX4rE7S36SrmE=", _key, _iv)}",
+  );
 
   try {
     final res = await http.post(
-      Uri.parse(url),
+      Uri.parse(useAlternateApi ? _secondApiUrl : _apiUrl),
       headers: _headers,
       body: data,
     );
@@ -123,7 +150,7 @@ Future<dynamic> _queryApi(
 }
 
 int _getExpiryDate() {
-  return DateTime.now().millisecondsSinceEpoch ~/ 1000 + 43200;
+  return DateTime.now().add(const Duration(hours: 12)).millisecondsSinceEpoch;
 }
 
 class Media {
@@ -709,11 +736,11 @@ class MovieData {
 }
 
 class _SuperStream {
-  static Future<List<Media>?> search(String query) async {
+  static Future<List<Media>> search(String query) async {
     query = query.toLowerCase().replaceAll('"', "");
 
     final apiQuery =
-        """{"childmode":"0","app_version":"$_appVersion","appid":"$_appId2","module":"Search3","channel":"Website","page":"1","lang":"en","type":"all","keyword":"$query","pagelimit":"20","expired_date":"${_getExpiryDate()}","platform":"android"}""";
+        """{"childmode":"1","app_version":"$_appVersion","appid":"$_appId2","module":"Search4","channel":"Website","page":"1","lang":"en","type":"all","keyword":"$query","pagelimit":"20","expired_date":"${_getExpiryDate()}","platform":"android"}""";
 
     final results = await _queryApi(apiQuery);
 
@@ -723,7 +750,7 @@ class _SuperStream {
       );
     }
 
-    return null;
+    return [];
   }
 
   static Future<Map<String, dynamic>?> getInfo(Media media) async {
@@ -783,7 +810,7 @@ class _SuperStream {
       return null;
     }
 
-    final linkDataJson = await _queryApi(query, useAlternativeApi: false);
+    final linkDataJson = await _queryApi(query);
 
     final linkData = ParsedLinkData.fromJson(
       linkDataJson,
@@ -886,14 +913,10 @@ class SuperStreamExtractor extends AnimeExtractor {
   Future<List<Anime>> search(String query) async {
     final results = await _SuperStream.search(query);
 
-    if (results == null) {
-      return [];
-    }
-
     return List.from(
       results.map(
         (x) => Anime(
-          imageUrl: x.posterOrg!,
+          imageUrl: x.posterOrg,
           title: x.title!,
           url: jsonEncode(x.toJson()),
         ),
